@@ -81,6 +81,7 @@ exports.profile = async (req, res, next) => {
       SELECT 
         SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as accepted_count,
         SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected_count,
+        SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_count,
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count
       FROM faculty_logger 
       WHERE faculty_id = ?`;
@@ -98,6 +99,7 @@ exports.profile = async (req, res, next) => {
           counts: {
             accepted_count: countResult[0].accepted_count || 0,
             rejected_count: countResult[0].rejected_count || 0,
+            resolved_count: countResult[0].resolved_count || 0,
             pending_count: countResult[0].pending_count || 0
           }
         });

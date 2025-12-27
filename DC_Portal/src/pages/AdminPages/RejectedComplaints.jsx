@@ -9,7 +9,6 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
-  Image,
   RefreshControl,
   Modal,
   Dimensions,
@@ -18,40 +17,92 @@ import axios from "axios";
 import { API_URL } from '../../utils/env'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import moment from 'moment';
 
 const { width } = Dimensions.get('window');
 
+// ✅ NEW: Sort Options Component
+const SortOptions = ({ selectedSort, onSortChange }) => {
+  const sortOptions = [
+    { label:  'All', value: 'all', icon: 'list-outline', color: '#6366f1' },
+    { label: 'Not Allotted', value: 'not_allotted', icon: 'close-circle-outline', color: '#ef4444' },
+    { label:  'Allotted', value: 'allotted', icon: 'checkmark-circle-outline', color:  '#22c55e' },
+  ];
+
+  return (
+    <View style={styles.sortContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.sortScrollContent}
+      >
+        {sortOptions.map((option) => {
+          const isSelected = selectedSort === option.value;
+          return (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortChip,
+                isSelected && { backgroundColor: option.color }
+              ]}
+              onPress={() => onSortChange(option.value)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name={option.icon} 
+                size={18} 
+                color={isSelected ? '#fff' : option.color} 
+              />
+              <Text style={[
+                styles.sortChipText,
+                isSelected && styles.sortChipTextActive
+              ]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+};
+
 const RejectedComplaints = () => {
   const navigation = useNavigation();
+  
+  // ✅ ALL useState hooks at the top
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adminId, setAdminId] = useState(null);
   const [adminName, setAdminName] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Search related states
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
-  
-  // Date filter states
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateFilter, setDateFilter] = useState(null);
-  
-  // Calendar states
   const [currentMonth, setCurrentMonth] = useState(moment(new Date()));
   const [tempSelectedDate, setTempSelectedDate] = useState(moment(new Date()));
+  const [selectedSort, setSelectedSort] = useState('all');  // ✅ NEW
+  const [sortVisible, setSortVisible] = useState(false);    // ✅ NEW
 
-  // Toggle search visibility and reset search text when closing
   const toggleSearch = () => {
     if (searchVisible) {
       setSearchText("");
-      setDateFilter(null); // Reset date filter when closing search
+      setDateFilter(null);
     }
     setSearchVisible(!searchVisible);
+  };
+
+  // ✅ NEW: Toggle sort visibility
+  const toggleSort = () => {
+    setSortVisible(! sortVisible);
+  };
+
+  // ✅ NEW: Handle sort change
+  const handleSortChange = (sortValue) => {
+    setSelectedSort(sortValue);
   };
 
   const handleRefresh = async () => {
@@ -63,25 +114,24 @@ const RejectedComplaints = () => {
     try {
       const storedId = await AsyncStorage.getItem('user_id');
       const storename = await AsyncStorage.getItem('user_name');
-      if (!storedId) {
+      if (! storedId) {
         navigation.navigate('Login');
         return;
       }
       setAdminId(storedId);
       setAdminName(storename);
 
-      // Use the admin get_complaints endpoint (all complaints)
       const res = await axios.get(`${API_URL}/api/admin/get_rejected_complaints`);
       if (res.data.success) {
-        const data = res.data.data.map((c) => ({
+        const data = res.data.data. map((c) => ({
           id: c.complaint_id,
           date: moment(c.date_time).format('YYYY-MM-DD'),
           time: moment(c.date_time).format('HH:mm:ss'),
           code: c.complaint_id,
           venue: c.venue,
-          status: c.status?.toLowerCase(),
+          status: c.status?. toLowerCase(),
           details: c.complaint,
-          meeting_alloted: c.meeting_alloted,
+          meeting_alloted: c.meeting_alloted || 0, // ✅ Ensure default value
           student_id: c.student_id,
           student_name: c.student_name,
           student_reg_num: c.student_reg_num,
@@ -91,12 +141,14 @@ const RejectedComplaints = () => {
           faculty_email: c.faculty_email,
           date_time: c.date_time,
           reject_message: c.reject_messege || c.revoke_message,
-          // Additional fields for detail view
           student_department: c.student_department,
           student_year: c.student_year,
           faculty_department: c.faculty_department,
         }));
-        setComplaints(data);
+        
+        // ✅ Sort:  Not allotted first, then allotted
+        const sortedData = data.sort((a, b) => a.meeting_alloted - b. meeting_alloted);
+        setComplaints(sortedData);
       } else {
         setComplaints([]);
       }
@@ -109,12 +161,10 @@ const RejectedComplaints = () => {
     }
   };
 
-  // Initial load
   useEffect(() => {
     fetchUserIdAndComplaints();
   }, []);
 
-  // Add focus effect to refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       if (adminId) {
@@ -123,12 +173,11 @@ const RejectedComplaints = () => {
     }, [adminId])
   );
 
-  // Navigation to detail screen
   const handleCardPress = (complaint) => {
-    navigation.navigate('ComplaintDetails', { complaint: complaint });
+    navigation.navigate('ComplaintDetails', { complaint:  complaint });
   };
 
-  // Calendar functions
+  // Calendar functions (keep all existing)
   const openCalendar = () => {
     setCurrentMonth(moment(selectedDate || new Date()));
     setTempSelectedDate(moment(selectedDate || new Date()));
@@ -145,7 +194,7 @@ const RejectedComplaints = () => {
 
   const selectCalendarDate = (selectedDay) => {
     if (isCurrentMonth(selectedDay) && !isFutureDate(selectedDay)) {
-      setTempSelectedDate(selectedDay.clone());
+      setTempSelectedDate(selectedDay. clone());
     }
   };
 
@@ -156,7 +205,7 @@ const RejectedComplaints = () => {
 
   const handleCalendarOK = () => {
     if (tempSelectedDate) {
-      setSelectedDate(tempSelectedDate.toDate());
+      setSelectedDate(tempSelectedDate. toDate());
       setDateFilter(tempSelectedDate.format('YYYY-MM-DD'));
     }
     setShowCalendar(false);
@@ -179,16 +228,15 @@ const RejectedComplaints = () => {
     return 'Select Date';
   };
 
-  // Generate calendar days
   const getCalendarDays = () => {
     const today = moment();
     const startOfMonth = currentMonth.clone().startOf('month');
     const endOfMonth = currentMonth.clone().endOf('month');
     const startOfWeek = startOfMonth.clone().startOf('week');
-    const endOfWeek = endOfMonth.clone().endOf('week');
+    const endOfWeek = endOfMonth. clone().endOf('week');
 
     const days = [];
-    let day = startOfWeek.clone();
+    let day = startOfWeek. clone();
 
     while (day.isSameOrBefore(endOfWeek, 'day')) {
       days.push(day.clone());
@@ -198,10 +246,9 @@ const RejectedComplaints = () => {
     return days;
   };
 
-  // Highlight helper function
   const highlightText = (text, searchText) => {
     if (!searchText) return <Text>{text}</Text>;
-    const string = text?.toString() ?? '';
+    const string = text?. toString() ??  '';
     const lowerText = string.toLowerCase();
     const lowerSearch = searchText.toLowerCase();
     const index = lowerText.indexOf(lowerSearch);
@@ -221,9 +268,15 @@ const RejectedComplaints = () => {
     );
   };
 
-  // Filter complaints based on search text and date
-  // Update the filteredComplaints filter function to include all fields
+  // ✅ UPDATED: Filter with sort logic for meeting allocation
 const filteredComplaints = complaints.filter((c) => {
+  // Sort filter
+  if (selectedSort === 'allotted') {
+    if (c.meeting_alloted !== "yes") return false;
+  } else if (selectedSort === 'not_allotted') {
+    if (c.meeting_alloted === "yes") return false;  // ✅ Show only NOT allotted
+  }
+
   // Date filter
   if (dateFilter && c.date !== dateFilter) {
     return false;
@@ -233,57 +286,54 @@ const filteredComplaints = complaints.filter((c) => {
   if (!searchText) return true;
   
   const s = searchText.toLowerCase();
-  const timeStr = moment(c.time, 'HH:mm:ss').format('hh:mm:ss A').toLowerCase();
+  const timeStr = moment(c. time, 'HH:mm:ss').format('hh:mm:ss A').toLowerCase();
 
   return (
-    // Existing fields
     c.student_name?.toLowerCase().includes(s) ||
     c.student_reg_num?.toLowerCase().includes(s) ||
     c.details?.toLowerCase().includes(s) ||
     c.venue?.toLowerCase().includes(s) ||
-    c.status?.toLowerCase().includes(s) ||
     c.code?.toString().toLowerCase().includes(s) ||
     c.date?.toLowerCase().includes(s) ||
     c.faculty_name?.toLowerCase().includes(s) ||
     timeStr.includes(s) ||
-    
-    // Additional fields for comprehensive search
     c.student_emailid?.toLowerCase().includes(s) ||
     c.faculty_email?.toLowerCase().includes(s) ||
     c.student_department?.toLowerCase().includes(s) ||
-    c.student_year?.toString().toLowerCase().includes(s) ||
+    c.student_year?. toString().toLowerCase().includes(s) ||
     c.faculty_department?.toLowerCase().includes(s) ||
-    c.reject_message?.toLowerCase().includes(s) ||
-    
-    // Format and search the full date-time
+    c.reject_message?. toLowerCase().includes(s) ||
     moment(c.date_time).format('DD-MM-YYYY').toLowerCase().includes(s) ||
     moment(c.date_time).format('MM-DD-YYYY').toLowerCase().includes(s) ||
     moment(c.date_time).format('YYYY-MM-DD').toLowerCase().includes(s) ||
     moment(c.date_time).format('DD/MM/YYYY').toLowerCase().includes(s) ||
     moment(c.date_time).format('MM/DD/YYYY').toLowerCase().includes(s) ||
-    
-    // Search in various time formats
     moment(c.date_time).format('HH:mm').toLowerCase().includes(s) ||
     moment(c.date_time).format('h:mm A').toLowerCase().includes(s) ||
     moment(c.date_time).format('h:mm a').toLowerCase().includes(s)
   );
+})
+// ✅ Sort:  Not Allotted first, then Allotted
+.sort((a, b) => {
+  if (a.meeting_alloted === "yes" && b.meeting_alloted !== "yes") return 1;   // b (not allotted) comes first
+  if (a.meeting_alloted !== "yes" && b.meeting_alloted === "yes") return -1;  // a (not allotted) comes first
+  return 0;  // same status → keep original order
 });
 
   const renderComplaintCard = (complaint) => {
-    // Status badge style based on status
-    let badgeStyle = styles.pendingBadge;
-    let textStyle = styles.pendingText;
+    // ✅ Meeting allocation badge style
+    const meetingBadgeStyle = complaint.meeting_alloted === "yes" 
+      ? styles.allottedBadge 
+      : styles. notAllottedBadge;
     
-    if (complaint.status === 'accepted') {
-      badgeStyle = styles.acceptedBadge;
-      textStyle = styles.acceptedText;
-    } else if (complaint.status === 'rejected') {
-      badgeStyle = styles.rejectedBadge;
-      textStyle = styles.rejectedText;
-    }
-    
-    // Format time to include AM/PM
-    const timeFormatted = moment(complaint.time, 'HH:mm:ss').format('hh:mm A');
+    const meetingTextStyle = complaint.meeting_alloted === "yes" 
+      ? styles.allottedText 
+      : styles.notAllottedText;
+    const meetingStatus = complaint.meeting_alloted === "yes" 
+      ? 'Allotted' 
+      : 'Not Allotted';
+
+    const timeFormatted = moment(complaint.time, 'HH:mm: ss').format('hh:mm A');
 
     return (
       <TouchableOpacity 
@@ -296,9 +346,16 @@ const filteredComplaints = complaints.filter((c) => {
           <Text style={styles.codeText}>
             {highlightText(complaint.code, searchText)}
           </Text>
-          <View style={[styles.statusBadge, badgeStyle]}>
-            <Text style={[styles.statusText, textStyle]}>
-              {highlightText(complaint.status, searchText)}
+          {/* ✅ Meeting Allocation Badge */}
+          <View style={[styles.statusBadge, meetingBadgeStyle]}>
+            <Ionicons 
+              name={complaint.meeting_alloted === "yes" ? "checkmark-circle" : "close-circle"} 
+              size={14} 
+              color={complaint.meeting_alloted === "yes" ? "#22c55e" : "#ef4444"} 
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[styles.statusText, meetingTextStyle]}>
+              {meetingStatus}
             </Text>
           </View>
         </View>
@@ -309,7 +366,7 @@ const filteredComplaints = complaints.filter((c) => {
             <Text style={styles.valueText}>
               {highlightText(
                 complaint.student_name
-                  ? complaint.student_name.charAt(0).toUpperCase() + complaint.student_name.slice(1).toLowerCase()
+                  ?  complaint.student_name. charAt(0).toUpperCase() + complaint.student_name.slice(1).toLowerCase()
                   : '',
                 searchText
               )}
@@ -324,35 +381,21 @@ const filteredComplaints = complaints.filter((c) => {
           </View>
 
           <View style={styles.complaintRow}>
-            <Text style={styles.label}>Faculty Name:</Text>
+            <Text style={styles. label}>Faculty Name:</Text>
             <Text style={styles.valueText}>
               {highlightText(
                 complaint.faculty_name
                   ? complaint.faculty_name.charAt(0).toUpperCase() + complaint.faculty_name.slice(1).toLowerCase()
-                  : '',
+                  :  '',
                 searchText
               )}
             </Text>
           </View>
-
-          {/* <View style={styles.complaintRow}>
-            <Text style={styles.label}>Date & Time:</Text>
-            <Text style={styles.valueText}>
-              {highlightText(complaint.date, searchText)} | {highlightText(timeFormatted, searchText)}
-            </Text>
-          </View> */}
         </View>
-
-        {/* View More Indicator
-        <View style={styles.viewMoreContainer}>
-          <Text style={styles.viewMoreText}>Tap to view details</Text>
-          <Ionicons name="chevron-forward" size={16} color="#6366f1" />
-        </View> */}
       </TouchableOpacity>
     );
   };
 
-  // Custom Calendar Component (Inline)
   const renderCalendar = () => {
     const days = getCalendarDays();
 
@@ -366,12 +409,10 @@ const filteredComplaints = complaints.filter((c) => {
         <View style={styles.modalOverlay}>
           <View style={styles.datePickerModal}>
             <View style={styles.calendarContainer}>
-              {/* Header */}
               <View style={styles.calendarHeader}>
                 <Text style={styles.calendarHeaderText}>SELECT DATE</Text>
               </View>
 
-              {/* Selected Date Display */}
               <View style={styles.selectedDateDisplay}>
                 <Text style={styles.selectedDateMainText}>
                   {formatSelectedDate()}
@@ -381,7 +422,6 @@ const filteredComplaints = complaints.filter((c) => {
                 </TouchableOpacity>
               </View>
 
-              {/* Month Navigation */}
               <View style={styles.monthNavigation}>
                 <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
                   <Ionicons name="chevron-back" size={20} color="#666" />
@@ -396,16 +436,14 @@ const filteredComplaints = complaints.filter((c) => {
                 </TouchableOpacity>
               </View>
 
-              {/* Week Days Header */}
               <View style={styles.weekDaysHeader}>
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
                   <Text key={index} style={styles.weekDayText}>{day}</Text>
                 ))}
               </View>
 
-              {/* Calendar Grid */}
               <View style={styles.calendarGrid}>
-                {days.map((day, index) => {
+                {days. map((day, index) => {
                   const isCurrentMonthDay = isCurrentMonth(day);
                   const isTodayDay = isToday(day);
                   const isSelectedDay = isSelected(day);
@@ -415,19 +453,19 @@ const filteredComplaints = complaints.filter((c) => {
                     <TouchableOpacity
                       key={index}
                       style={[
-                        styles.dayButton,
-                        isTodayDay && !isSelectedDay && styles.todayButton,
+                        styles. dayButton,
+                        isTodayDay && ! isSelectedDay && styles.todayButton,
                         isSelectedDay && styles.selectedDayButton,
                       ]}
                       onPress={() => selectCalendarDate(day)}
-                      disabled={isFuture || !isCurrentMonthDay}
+                      disabled={isFuture || ! isCurrentMonthDay}
                     >
                       <Text
                         style={[
                           styles.dayText,
-                          !isCurrentMonthDay && styles.inactiveDayText,
+                          ! isCurrentMonthDay && styles.inactiveDayText,
                           isTodayDay && !isSelectedDay && styles.todayText,
-                          isSelectedDay && styles.selectedDayText,
+                          isSelectedDay && styles. selectedDayText,
                           isFuture && styles.futureDayText,
                         ]}
                       >
@@ -439,8 +477,7 @@ const filteredComplaints = complaints.filter((c) => {
               </View>
             </View>
             
-            {/* Action Buttons */}
-            <View style={styles.datePickerButtons}>
+            <View style={styles. datePickerButtons}>
               <TouchableOpacity 
                 style={styles.cancelButton} 
                 onPress={handleCalendarCancel}
@@ -462,28 +499,46 @@ const filteredComplaints = complaints.filter((c) => {
   };
 
   return (
-    <View style={styles.container} edges={['right', 'bottom', 'left']}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       <View style={styles.HeaderContainer}>
-       
         <View style={styles.HeaderTextContainer}>
-          <Text style={styles.HeaderText}>History Of Rejected Complaints :</Text>
+          <Text style={styles.HeaderText}>Rejected Complaints</Text>
         </View>
         
-        <TouchableOpacity 
-          style={styles.searchIconContainer}
-          onPress={toggleSearch}
-        >
-          <Ionicons 
-            name={searchVisible ? "close-outline" : "search-outline"} 
-            size={24} 
-            color="#333" 
-          />
-        </TouchableOpacity>
+        {/* ✅ Added sort button */}
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.searchIconContainer}
+            onPress={toggleSort}
+          >
+            <Ionicons name="funnel-outline" size={24} color="#6366f1" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.searchIconContainer}
+            onPress={toggleSearch}
+          >
+            <Ionicons 
+              name={searchVisible ? "close-outline" : "search-outline"} 
+              size={24} 
+              color="#6366f1" 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
       
-      {/* Search and Date Filter Container */}
+      {/* ✅ Sort Options */}
+      {sortVisible && (
+        <View style={styles.sortWrapper}>
+          <SortOptions 
+            selectedSort={selectedSort}
+            onSortChange={handleSortChange}
+          />
+        </View>
+      )}
+
       {searchVisible && (
         <View style={styles.filterContainer}>
           <View style={styles.searchRow}>
@@ -521,11 +576,10 @@ const filteredComplaints = complaints.filter((c) => {
         </View>
       )}
 
-      {/* Render Calendar Modal */}
       {renderCalendar()}
 
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      {loading ?  (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems:  'center' }}>
           <ActivityIndicator size="large" color="#e63946" />
           <Text style={{ marginTop: 12, color: '#6c757d', fontSize: 14 }}>Loading complaints...</Text>
         </View>
@@ -555,16 +609,27 @@ const filteredComplaints = complaints.filter((c) => {
                 borderRadius: 12,
                 elevation: 2
               }}>
+                <Ionicons name="document-text-outline" size={64} color="#d1d5db" />
                 <Text style={{
                   textAlign: "center",
                   fontSize: 16,
                   color: "#6c757d",
+                  marginTop: 16,
                   marginBottom: 8,
                   fontWeight: '500'
                 }}>
-                  {searchText || dateFilter
-                    ? "No complaints match your search criteria" 
-                    : "No complaints found."}
+                  {searchText || dateFilter || selectedSort !== 'all'
+                    ? "No complaints match your filters" 
+                    : "No rejected complaints found"}
+                </Text>
+                <Text style={{
+                  fontSize: 14,
+                  color: "#9ca3af",
+                  textAlign: 'center'
+                }}>
+                  {searchText || dateFilter || selectedSort !== 'all'
+                    ? "Try adjusting your search or filters" 
+                    : "Rejected complaints will appear here"}
                 </Text>
               </View>
             )}
@@ -580,30 +645,69 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa"
   },
-  HeaderContainer: {
+  HeaderContainer:  {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical:  10,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
+    borderBottomWidth:  1,
     borderBottomColor: "#e9ecef",
     elevation: 2,
   },
   HeaderTextContainer: {
     flex: 1,
-    marginTop:10,
+    marginTop: 10,
   },
   HeaderText: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#2d3436",
+    color: "#6366f1",
     marginBottom: 4
   },
+  // ✅ Header buttons container
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   searchIconContainer: {
-    padding: 8,
+    padding:  8,
     borderRadius: 20,
     backgroundColor: "#f1f3f5",
+    marginLeft: 8,
+  },
+  // ✅ Sort wrapper and styles
+  sortWrapper: {
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
+  },
+  sortContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  sortScrollContent: {
+    paddingVertical: 4,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical:  8,
+    borderRadius:  20,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 8,
+  },
+  sortChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginLeft: 6,
+  },
+  sortChipTextActive: {
+    color: '#fff',
   },
   filterContainer: {
     backgroundColor: "#fff",
@@ -615,10 +719,10 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   searchInputContainer: {
     flex: 1,
+    marginRight: 8,
   },
   searchInput: {
     height: 40,
@@ -631,8 +735,8 @@ const styles = StyleSheet.create({
   },
   calendarButton: {
     width: 40,
-    height: 40,
-    borderRadius: 8,
+    height:  40,
+    borderRadius:  8,
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#d1d5db',
@@ -653,7 +757,7 @@ const styles = StyleSheet.create({
   },
   selectedDateText: {
     fontSize: 14,
-    color: '#0277bd',
+    color:  '#0277bd',
     fontWeight: '500',
   },
   clearDateButton: {
@@ -664,7 +768,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16
   },
-  complaintsContainer: {
+  complaintsContainer:  {
     paddingBottom: 20
   },
   card: {
@@ -676,7 +780,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e9ecef",
   },
-  cardHeader: {
+  cardHeader:  {
     marginBottom: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -689,7 +793,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   complaintRow: {
-    flexDirection: "row",
+    flexDirection:  "row",
     marginBottom: 8,
     alignItems: 'flex-start'
   },
@@ -705,8 +809,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     backgroundColor: "#fff1f0",
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingVertical:  2,
+    borderRadius:  4,
   },
   valueText: {
     fontSize: 14,
@@ -714,42 +818,26 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20
   },
-  viewMoreContainer: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f3f5',
-    marginTop: 8,
-  },
-  viewMoreText: {
-    fontSize: 12,
-    color: '#6366f1',
-    fontWeight: '500',
-    marginRight: 4,
-  },
-  statusBadge: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical:  4,
     borderRadius: 20,
   },
   statusText: {
     fontSize: 12,
     fontWeight: "600",
-    borderRadius: 4,
-    textTransform: "capitalize",
   },
-  pendingBadge: { backgroundColor: "#fff3cd" },
-  pendingText: { color: "#ad954b" },
-  acceptedBadge: { backgroundColor: "#dcfce7" },
-  acceptedText: { color: "#22c55e" },
-  rejectedBadge: { backgroundColor: "#fcdcdc" },
-  rejectedText: { color: "#ef4444" },
+  // ✅ Meeting allocation badge styles
+  allottedBadge: { backgroundColor: "#dcfce7" },
+  allottedText: { color: "#22c55e" },
+  notAllottedBadge: { backgroundColor: "#fcdcdc" },
+  notAllottedText: { color: "#ef4444" },
 
-  // Calendar Styles (keeping all existing calendar styles)
+  // Keep all existing calendar styles... 
   modalOverlay: {
-    flex: 1,
+    flex:  1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -764,7 +852,7 @@ const styles = StyleSheet.create({
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity:  0.3,
     shadowRadius: 8,
   },
   calendarContainer: {
@@ -775,7 +863,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  calendarHeaderText: {
+  calendarHeaderText:  {
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
@@ -809,7 +897,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   monthYearText: {
-    fontSize: 16,
+    fontSize:  16,
     fontWeight: '500',
     color: '#333',
   },
@@ -827,13 +915,13 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   calendarGrid: {
-    flexDirection: 'row',
+    flexDirection:  'row',
     flexWrap: 'wrap',
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
   dayButton: {
-    width: '14.28%',
+    width: '14. 28%',
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -858,11 +946,11 @@ const styles = StyleSheet.create({
     color: '#ccc',
   },
   todayText: {
-    color: '#333',
+    color:  '#333',
     fontWeight: '600',
   },
   selectedDayText: {
-    color: '#fff',
+    color:  '#fff',
     fontWeight: '600',
   },
   futureDayText: {
@@ -874,11 +962,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#f8f9fa',
-    gap: 16,
   },
   cancelButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
+    marginRight: 16,
   },
   confirmButton: {
     paddingVertical: 8,

@@ -19,21 +19,76 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import moment from 'moment';
 
-// Header Component
-const MeetingsHeader = ({ onSearchToggle, searchVisible }) => {
+// ✅ NEW: Sort Options Component
+const SortOptions = ({ selectedSort, onSortChange }) => {
+  const sortOptions = [
+    { label: 'All', value: 'all', icon: 'list-outline', color: '#6366f1' },
+    { label: 'Scheduled', value: 'scheduled', icon: 'time-outline', color: '#ad954b' },
+    { label: 'Present', value: 'present', icon: 'checkmark-circle-outline', color: '#22c55e' },
+    { label: 'Absent', value:  'absent', icon: 'close-circle-outline', color: '#ef4444' },
+  ];
+
+  return (
+    <View style={styles.sortContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.sortScrollContent}
+      >
+        {sortOptions.map((option) => {
+          const isSelected = selectedSort === option.value;
+          return (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortChip,
+                isSelected && { backgroundColor: option.color }
+              ]}
+              onPress={() => onSortChange(option.value)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name={option.icon} 
+                size={18} 
+                color={isSelected ? '#fff' : option.color} 
+              />
+              <Text style={[
+                styles.sortChipText,
+                isSelected && styles.sortChipTextActive
+              ]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+};
+
+// ✅ UPDATED: Header Component
+const MeetingsHeader = ({ onSearchToggle, searchVisible, onSortToggle }) => {
   return (
     <View style={styles.headerContainer}>
       <Text style={styles.pageTitle}>My Meetings</Text>
-      <TouchableOpacity 
-        style={styles.searchIconButton}
-        onPress={onSearchToggle}
-      >
-        <Ionicons 
-          name={searchVisible ? "close-outline" : "search-outline"} 
-          size={24} 
-          color="#6366f1" 
-        />
-      </TouchableOpacity>
+      <View style={styles.headerButtons}>
+        <TouchableOpacity 
+          style={styles.searchIconButton}
+          onPress={onSortToggle}
+        >
+          <Ionicons name="funnel-outline" size={24} color="#6366f1" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.searchIconButton}
+          onPress={onSearchToggle}
+        >
+          <Ionicons 
+            name={searchVisible ? "close-outline" : "search-outline"} 
+            size={24} 
+            color="#6366f1" 
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -117,18 +172,18 @@ const MeetingCard = ({ meeting, searchText, highlightText, onPress }) => {
 
       <View style={styles.cardContent}>
         <View style={styles.complaintRow}>
-          <Text style={styles. label}>Complaint ID: </Text>
+          <Text style={styles. label}>Complaint ID:</Text>
           <Text style={styles.valueText}>
             {highlightText(meeting.complaint_id, searchText)}
           </Text>
         </View>
 
-        <View style={styles. complaintRow}>
+        <View style={styles.complaintRow}>
           <Text style={styles.label}>Admin Name:</Text>
           <Text style={styles.valueText}>
             {highlightText(
               meeting.admin_name
-                ? meeting.admin_name. charAt(0).toUpperCase() + meeting.admin_name.slice(1).toLowerCase()
+                ?  meeting.admin_name.charAt(0).toUpperCase() + meeting.admin_name.slice(1).toLowerCase()
                 : '',
               searchText
             )}
@@ -154,10 +209,10 @@ const MeetingCard = ({ meeting, searchText, highlightText, onPress }) => {
           </Text>
         </View>
 
-        <View style={styles. complaintRow}>
+        <View style={styles.complaintRow}>
           <Text style={styles.label}>Meeting Date:</Text>
           <Text style={styles.valueText}>
-            {highlightText(meeting.date, searchText)} | {highlightText(timeFormatted, searchText)}
+            {highlightText(meeting. date, searchText)} | {highlightText(timeFormatted, searchText)}
           </Text>
         </View>
       </View>
@@ -173,7 +228,8 @@ const CardsContainer = ({
   refreshing,
   onRefresh,
   onCardPress,
-  selectedDate 
+  selectedDate,
+  selectedSort
 }) => {
   if (meetings.length === 0) {
     return (
@@ -193,13 +249,13 @@ const CardsContainer = ({
         <View style={styles.emptyContainer}>
           <Ionicons name="calendar-outline" size={64} color="#d1d5db" />
           <Text style={styles.emptyText}>
-            {searchText || selectedDate
-              ? "No meetings match your search criteria" 
+            {searchText || selectedDate || selectedSort !== 'all'
+              ? "No meetings match your filters" 
               : "No scheduled meetings found"}
           </Text>
           <Text style={styles.emptySubtext}>
-            {searchText || selectedDate 
-              ? "Try adjusting your search or date filter" 
+            {searchText || selectedDate || selectedSort !== 'all'
+              ?  "Try adjusting your search or filters" 
               : "Your scheduled meetings will appear here"}
           </Text>
         </View>
@@ -236,7 +292,7 @@ const CardsContainer = ({
   );
 };
 
-// Custom Calendar Component
+// Custom Calendar Component (keep existing)
 const CustomCalendar = ({ date, onDateChange }) => {
   const [currentMonth, setCurrentMonth] = useState(moment(date));
   const [selectedDay, setSelectedDay] = useState(moment(date).date());
@@ -248,7 +304,7 @@ const CustomCalendar = ({ date, onDateChange }) => {
   const endOfWeek = endOfMonth.clone().endOf('week');
 
   const days = [];
-  let day = startOfWeek.clone();
+  let day = startOfWeek. clone();
 
   while (day.isSameOrBefore(endOfWeek, 'day')) {
     days.push(day.clone());
@@ -264,7 +320,7 @@ const CustomCalendar = ({ date, onDateChange }) => {
   };
 
   const selectDate = (selectedDay) => {
-    const newDate = currentMonth.clone().date(selectedDay. date());
+    const newDate = currentMonth.clone().date(selectedDay.date());
     setSelectedDay(selectedDay. date());
     onDateChange(newDate. toDate());
   };
@@ -309,7 +365,7 @@ const CustomCalendar = ({ date, onDateChange }) => {
       </View>
 
       <View style={styles.calendarGrid}>
-        {days.map((day, index) => {
+        {days. map((day, index) => {
           const dayNumber = day.date();
           const isCurrentMonthDay = isCurrentMonth(day);
           const isTodayDay = isToday(day);
@@ -347,20 +403,20 @@ const CustomCalendar = ({ date, onDateChange }) => {
 // Main Component
 const ScheduledMeetings = () => {
   const navigation = useNavigation();
+  
+  // ✅ ALL useState hooks at the top
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [studentId, setStudentId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Search related states
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
-  
-  // Date filter states
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateFilter, setDateFilter] = useState(null);
   const [tempDate, setTempDate] = useState(new Date());
+  const [selectedSort, setSelectedSort] = useState('all');  // ✅ NEW
+  const [sortVisible, setSortVisible] = useState(false);    // ✅ NEW
 
   // Toggle search visibility and reset search text when closing
   const toggleSearch = () => {
@@ -369,6 +425,16 @@ const ScheduledMeetings = () => {
       setDateFilter(null);
     }
     setSearchVisible(!searchVisible);
+  };
+
+  // ✅ NEW: Toggle sort visibility
+  const toggleSort = () => {
+    setSortVisible(!sortVisible);
+  };
+
+  // ✅ NEW: Handle sort change
+  const handleSortChange = (sortValue) => {
+    setSelectedSort(sortValue);
   };
 
   const handleRefresh = async () => {
@@ -385,7 +451,6 @@ const ScheduledMeetings = () => {
       }
       setStudentId(storedId);
 
-      // Fetch scheduled meetings for this student
       const res = await axios.get(`${API_URL}/api/student/get_schedule_meetings/${storedId}`);
       if (res.data.success) {
         const data = res.data.data. map((m) => ({
@@ -424,12 +489,10 @@ const ScheduledMeetings = () => {
     }
   };
 
-  // Initial load
   useEffect(() => {
     fetchUserIdAndMeetings();
   }, []);
 
-  // Add focus effect to refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       if (studentId) {
@@ -438,12 +501,10 @@ const ScheduledMeetings = () => {
     }, [studentId])
   );
 
-  // Navigation to detail screen
   const handleCardPress = (meeting) => {
     navigation.navigate('StudentMeetingDetails', { meeting:  meeting });
   };
 
-  // Date picker handlers
   const openDatePicker = () => {
     setTempDate(selectedDate || new Date());
     setShowCalendar(true);
@@ -464,12 +525,11 @@ const ScheduledMeetings = () => {
     setSelectedDate(new Date());
   };
 
-  // Highlight helper function
   const highlightText = (text, searchText) => {
     if (!searchText) return <Text>{text}</Text>;
-    const string = text?. toString() ?? '';
+    const string = text?. toString() ??  '';
     const lowerText = string.toLowerCase();
-    const lowerSearch = searchText. toLowerCase();
+    const lowerSearch = searchText.toLowerCase();
     const index = lowerText.indexOf(lowerSearch);
 
     if (index === -1) return <Text>{text}</Text>;
@@ -487,8 +547,16 @@ const ScheduledMeetings = () => {
     );
   };
 
-  // Filter meetings based on search text and date
+  // ✅ UPDATED: Filter meetings with sort logic
   const filteredMeetings = meetings.filter((m) => {
+    // Sort filter
+    if (selectedSort !== 'all') {
+      const attendanceStatus = m.attendance || 'scheduled';
+      if (attendanceStatus. toLowerCase() !== selectedSort.toLowerCase()) {
+        return false;
+      }
+    }
+
     // Date filter
     if (dateFilter && m.date !== dateFilter) {
       return false;
@@ -507,7 +575,7 @@ const ScheduledMeetings = () => {
       m.info?.toLowerCase().includes(s) ||
       m.fl_complaint?.toLowerCase().includes(s) ||
       m.complaint_id?.toString().toLowerCase().includes(s) ||
-      m.date?. toLowerCase().includes(s) ||
+      m.date?.toLowerCase().includes(s) ||
       m.admin_email?.toLowerCase().includes(s) ||
       m.faculty_email?.toLowerCase().includes(s) ||
       m.admin_department?.toLowerCase().includes(s) ||
@@ -545,7 +613,18 @@ const ScheduledMeetings = () => {
         <MeetingsHeader 
           onSearchToggle={toggleSearch}
           searchVisible={searchVisible}
+          onSortToggle={toggleSort}
         />
+
+        {/* ✅ NEW: Sort Options */}
+        {sortVisible && (
+          <View style={styles.sortWrapper}>
+            <SortOptions 
+              selectedSort={selectedSort}
+              onSortChange={handleSortChange}
+            />
+          </View>
+        )}
 
         {/* Search Filter Bar */}
         {searchVisible && (
@@ -569,6 +648,7 @@ const ScheduledMeetings = () => {
           onRefresh={handleRefresh}
           onCardPress={handleCardPress}
           selectedDate={dateFilter}
+          selectedSort={selectedSort}
         />
       </View>
 
@@ -619,7 +699,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 16,
+    paddingBottom:  16,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -641,10 +721,47 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6366f1',
   },
+  // ✅ NEW: Header buttons container
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   searchIconButton: {
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#f1f3f5',
+    marginLeft: 8,
+  },
+  
+  // ✅ NEW: Sort wrapper and styles
+  sortWrapper: {
+    marginTop: 16,
+  },
+  sortContainer: {
+    paddingVertical: 4,
+  },
+  sortScrollContent: {
+    paddingVertical: 4,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical:  8,
+    borderRadius: 20,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 8,
+  },
+  sortChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginLeft: 6,
+  },
+  sortChipTextActive: {
+    color: '#fff',
   },
   
   // Search Filter Container
@@ -657,10 +774,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 0,
-    gap: 8,
   },
   searchContainer: {
     flex: 1,
+    marginRight: 8,
   },
   searchInput: {
     height: 40,
@@ -696,7 +813,7 @@ const styles = StyleSheet.create({
     borderColor: '#b3e5fc',
   },
   selectedDateText: {
-    fontSize:  14,
+    fontSize: 14,
     color: '#0277bd',
     fontWeight: '500',
   },
@@ -705,7 +822,7 @@ const styles = StyleSheet.create({
   },
   
   // Cards Wrapper
-  cardsWrapper: {
+  cardsWrapper:  {
     flex: 1,
     backgroundColor: '#f3f4f6',
   },
@@ -824,7 +941,7 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
 
-  // Calendar Styles
+  // Calendar Styles (keep all existing)
   modalOverlay: {
     flex:  1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -845,7 +962,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   calendarContainer: {
-    backgroundColor: '#fff',
+    backgroundColor:  '#fff',
   },
   calendarHeader: {
     backgroundColor: '#7c3aed',
@@ -886,7 +1003,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   monthYearText: {
-    fontSize:  16,
+    fontSize: 16,
     fontWeight: '500',
     color: '#333',
   },
@@ -910,7 +1027,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   dayButton: {
-    width: '14. 28%',
+    width: '14.28%',
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -921,7 +1038,7 @@ const styles = StyleSheet.create({
     borderColor: '#7c3aed',
     borderWidth: 1,
   },
-  selectedDayButton:  {
+  selectedDayButton: {
     backgroundColor: '#7c3aed',
     borderRadius: 50,
     borderColor: '#7c3aed',
@@ -948,11 +1065,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#f8f9fa',
-    gap: 16,
   },
   cancelButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
+    marginRight: 16,
   },
   confirmButton: {
     paddingVertical: 8,

@@ -1,13 +1,12 @@
 buildscript {
     ext {
         buildToolsVersion = "36.0.0"
-        minSdkVersion = 24
+        minSdkVersion = 24  // ✅ Must be at least 24 for Vision Camera
         compileSdkVersion = 36
         targetSdkVersion = 36
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.1.20"
-
-         googlePlayServicesAuthVersion = "20.7.0"
+        googlePlayServicesAuthVersion = "21.0.0"
     }
     repositories {
         google()

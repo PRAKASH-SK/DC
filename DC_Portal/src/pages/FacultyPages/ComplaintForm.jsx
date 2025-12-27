@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../utils/env';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import IDScanner from '../../Components/IdScan/IDScanner';
 
 const { height, width } = Dimensions.get('window');
 
@@ -31,6 +32,7 @@ const ComplaintForm = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [complaintId, setComplaintId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showScanner, setShowScanner] = useState(false); // ✅ Scanner state
   
   const searchInputRef = useRef(null);
   const venueInputRef = useRef(null);
@@ -43,7 +45,7 @@ const ComplaintForm = () => {
   useEffect(() => {
     if (route.params?.complaintId) {
       setIsEditMode(true);
-      setComplaintId(route.params.complaintId);
+      setComplaintId(route.params. complaintId);
       fetchComplaintDetails(route.params.complaintId);
     }
   }, [route.params]);
@@ -67,7 +69,6 @@ const ComplaintForm = () => {
         setVenue(complaintData.venue);
         setComplaint(complaintData.complaint);
         
-        // Format the date_time for display
         const formattedDateTime = new Date(complaintData.date_time).toLocaleString('sv-SE').replace('T', ' ');
         setDateTime(formattedDateTime);
       } else {
@@ -83,7 +84,7 @@ const ComplaintForm = () => {
     }
   };
 
-  // fetch students from backend
+  // Fetch students from backend
   useEffect(() => {
     fetch(`${API_URL}/api/faculty/get_students`)
       .then(res => res.json())
@@ -91,6 +92,7 @@ const ComplaintForm = () => {
         if (data.success) {
           console.log("Fetched students:", data.data);
           setStudents(data.data);
+          console.log("Students :", students);
         } else {
           Alert.alert('Error', 'Failed to fetch students');
         }
@@ -98,9 +100,10 @@ const ComplaintForm = () => {
       .catch(err => console.log(err));
   }, []);
 
-  // live clock for display (only for new complaints)
+
+  // Live clock for display (only for new complaints)
   useEffect(() => {
-    if (!isEditMode) {
+    if (! isEditMode) {
       const timer = setInterval(() => {
         const now = new Date();
         const formatted =
@@ -110,11 +113,11 @@ const ComplaintForm = () => {
           '-' +
           String(now.getDate()).padStart(2, '0') +
           ' ' +
-          String(now.getHours()).padStart(2, '0') +
+          String(now. getHours()).padStart(2, '0') +
           ':' +
-          String(now.getMinutes()).padStart(2, '0') +
+          String(now. getMinutes()).padStart(2, '0') +
           ':' +
-          String(now.getSeconds()).padStart(2, '0');
+          String(now. getSeconds()).padStart(2, '0');
         setDateTime(formatted);
       }, 1000);
 
@@ -122,26 +125,157 @@ const ComplaintForm = () => {
     }
   }, [isEditMode]);
 
-  // Filter students based on search text for both name and reg_num
+  // Filter students based on search text
   const filteredStudents = students.filter(student =>
-    console.log("Filtering student:", student, "with search:", studentSearch) || 
     student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
     student.reg_num.toLowerCase().includes(studentSearch.toLowerCase())
   );
 
+
+  // ✅ Handle student selection from dropdown
   const handleStudentSelect = (student) => {
     setSelectedStudent(student);
     setStudentSearch(`${student.name} (${student.reg_num})`);
     setShowDropdown(false);
-    
-    // Move focus to the next field
     venueInputRef.current?.focus();
   };
 
+  // ✅ Dismiss dropdown
   const dismissDropdown = () => {
     setShowDropdown(false);
   };
 
+  // ✅ Toggle dropdown
+  const toggleDropdown = () => {
+    setShowDropdown(!showDropdown);
+  };
+
+  // ✅ Handle ID scan result
+  const handleScanComplete = async ({ name, regNum }) => {
+    console.log('Scanned:', { name, regNum });
+    console.log('Searching for regNum:', regNum, 'in students list of length', name);
+
+    // Find student in the fetched students list
+    const student = students.find(
+      s => s.reg_num. toLowerCase() === regNum.toLowerCase()
+    );
+    console.log('Found student:', student);
+
+    if (student) {
+      // Verify name matches (fuzzy match)
+      const similarity = calculateSimilarity(
+        student.name. toLowerCase(),
+        name.toLowerCase()
+      );
+
+      if (similarity > 0.7) {
+        // Auto-fill student details
+        setSelectedStudent(student);
+        setStudentSearch(`${student.name} (${student.reg_num})`);
+        setShowDropdown(false);
+        
+        Alert.alert(
+          'Student Found!  ✅',
+          `Name: ${student.name}\nReg No: ${student.reg_num}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => venueInputRef.current?.focus()
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Name Mismatch',
+          `Registration number found but name doesn't match.\n\nScanned: ${name}\nDatabase: ${student.name}\n\nPlease verify the ID card.`,
+          [
+            { text: 'Retry Scan', onPress: () => setShowScanner(true) },
+            { text: 'Manual Entry', onPress: () => searchInputRef.current?.focus() }
+          ]
+        );
+      }
+    } else {
+      Alert.alert(
+        'Student Not Found ❌',
+        `Registration number ${regNum} not found in the database.\n\nPlease ensure the student is registered. `,
+        [
+          { text: 'Retry Scan', onPress: () => setShowScanner(true) },
+          { text: 'Manual Entry', onPress: () => searchInputRef.current?.focus() }
+        ]
+      );
+    }
+  };
+
+  // ✅ Calculate string similarity
+  const calculateSimilarity = (str1, str2) => {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    const editDistance = levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  };
+
+  // ✅ Levenshtein distance algorithm
+  const levenshteinDistance = (str1, str2) => {
+    const matrix = [];
+
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+
+    return matrix[str2.length][str1.length];
+  };
+
+  // ✅ Render dropdown
+  const renderDropdown = () => {
+    if (!showDropdown) return null;
+    
+    return (
+      <View style={styles.dropdownContainer}>
+        {filteredStudents.length > 0 ? (
+          <FlatList
+            data={filteredStudents. slice(0, 10)}
+            keyExtractor={(item, index) => `student_${index}`}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => handleStudentSelect(item)}
+              >
+                <Text style={styles.dropdownText}>{item.name}</Text>
+                <Text style={styles.dropdownSubText}>{item.reg_num}</Text>
+              </TouchableOpacity>
+            )}
+            keyboardShouldPersistTaps="always"
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <Text style={styles.noResults}>No students found</Text>
+        )}
+      </View>
+    );
+  };
+
+  // Handle form submission
   const handleSubmit = async () => {
     if (!selectedStudent || !venue || !complaint) {
       Alert.alert('Error', 'Please fill all fields');
@@ -153,9 +287,8 @@ const ComplaintForm = () => {
     try {
       const faculty_id = await AsyncStorage.getItem('user_id');
       
-      // Get current time for new complaints or use existing time for edits
       let submitDateTime = dateTime;
-      if (!isEditMode) {
+      if (! isEditMode) {
         const now = new Date();
         submitDateTime =
           now.getFullYear() +
@@ -182,19 +315,16 @@ const ComplaintForm = () => {
 
       let response;
       if (isEditMode) {
-        // Update existing complaint
         response = await fetch(`${API_URL}/api/faculty/updatecomplaint/${complaintId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-         
         });
       } else {
-        // Create new complaint
         response = await fetch(`${API_URL}/api/faculty/complaints`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body:  JSON.stringify(payload),
         });
       }
 
@@ -206,22 +336,21 @@ const ComplaintForm = () => {
           [
             {
               text: 'OK',
-              onPress: () => {
+              onPress:  () => {
                 navigation.goBack();
               }
             }
           ]
         );
         
-        if (!isEditMode) {
-          // Clear form only for new complaints
+        if (! isEditMode) {
           setSelectedStudent(null);
           setStudentSearch('');
           setVenue('');
           setComplaint('');
         }
       } else {
-        Alert.alert('Error', data.message || 'Something went wrong');
+        Alert.alert('Error', data. message || 'Something went wrong');
       }
     } catch (err) {
       console.log(err);
@@ -229,38 +358,6 @@ const ComplaintForm = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown);
-  };
-
-  const renderDropdown = () => {
-    if (!showDropdown) return null;
-    
-    return (
-      <View style={styles.dropdownContainer}>
-        {filteredStudents.length > 0 ? (
-          <FlatList
-            data={filteredStudents.slice(0, 10)} // Limit to prevent performance issues
-            keyExtractor={(item, index) => `student_${index}`}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => handleStudentSelect(item)}
-              >
-                <Text style={styles.dropdownText}>{item.name}</Text>
-                <Text style={styles.dropdownSubText}>{item.reg_num}</Text>
-              </TouchableOpacity>
-            )}
-            keyboardShouldPersistTaps="always"
-            showsVerticalScrollIndicator={false}
-          />
-        ) : (
-          <Text style={styles.noResults}>No students found</Text>
-        )}
-      </View>
-    );
   };
 
   if (loading) {
@@ -277,9 +374,17 @@ const ComplaintForm = () => {
       style={styles.keyboardAvoid}
     >
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
+      
+      {/* ✅ ID Scanner Modal */}
+      <IDScanner
+        visible={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScanComplete={handleScanComplete}
+      />
+
       <TouchableWithoutFeedback onPress={dismissDropdown}>
         <View style={styles.container}>
-          {/* Header with Back Button */}
+          {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity 
               style={styles.backButton} 
@@ -293,7 +398,19 @@ const ComplaintForm = () => {
           </View>
 
           <View style={styles.formContainer}>
-            {/* Student Search with Dropdown (Both Name and Reg Num) */}
+            {/* ✅ Scan ID Button */}
+            {!isEditMode && (
+              <TouchableOpacity
+                style={styles.scanButton}
+                onPress={() => setShowScanner(true)}
+                activeOpacity={0.7}
+              >
+                <Icon name="scan" size={24} color="#fff" />
+                <Text style={styles.scanButtonText}>Scan ID Card</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Student Search */}
             <Text style={styles.inputLabel}>Student Information</Text>
             <View style={styles.inputWrapper}>
               <TextInput
@@ -304,8 +421,6 @@ const ComplaintForm = () => {
                 onChangeText={(text) => {
                   setStudentSearch(text);
                   setShowDropdown(true);
-                  
-                  // If search is cleared, reset the selected student
                   if (text === '') {
                     setSelectedStudent(null);
                   }
@@ -317,7 +432,7 @@ const ComplaintForm = () => {
                 onPress={toggleDropdown}
               >
                 <Icon 
-                  name={showDropdown ? "chevron-up" : "chevron-down"} 
+                  name={showDropdown ? "chevron-up" :  "chevron-down"} 
                   size={18} 
                   color="#6b7280" 
                 />
@@ -325,6 +440,7 @@ const ComplaintForm = () => {
               {renderDropdown()}
             </View>
 
+            {/* Venue */}
             <Text style={styles.inputLabel}>Venue</Text>
             <TextInput
               ref={venueInputRef}
@@ -335,6 +451,7 @@ const ComplaintForm = () => {
               onFocus={dismissDropdown}
             />
 
+            {/* Complaint Description */}
             <Text style={styles.inputLabel}>Complaint Description</Text>
             <TextInput
               ref={complaintInputRef}
@@ -349,16 +466,17 @@ const ComplaintForm = () => {
             />
 
             <Text style={styles.dateText}>
-              {isEditMode ? 'Original Date & Time: ' : 'Date & Time: '}{dateTime}
+              {isEditMode ? 'Original Date & Time:  ' : 'Date & Time: '}{dateTime}
             </Text>
 
+            {/* Submit Button */}
             <TouchableOpacity 
               style={[styles.button, loading && styles.buttonDisabled]} 
               onPress={handleSubmit}
               activeOpacity={0.7}
               disabled={loading}
             >
-              <Text style={styles.buttonText}>
+              <Text style={styles. buttonText}>
                 {loading 
                   ? (isEditMode ? 'Updating...' : 'Submitting...') 
                   : (isEditMode ? 'Update Complaint' : 'Submit Complaint')
@@ -372,21 +490,21 @@ const ComplaintForm = () => {
   );
 };
 
-const styles = StyleSheet.create({
+// ✅ Add scanButton styles
+const styles = StyleSheet. create({
   keyboardAvoid: {
-    // paddingTop: 30,
     flex: 1,
     backgroundColor: '#fff',
   },
-  container: { 
+  container:  { 
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
+  header:  {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 65 : 45,
+    paddingTop: Platform.OS === 'ios' ?  65 : 45,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f1f1',
@@ -394,13 +512,13 @@ const styles = StyleSheet.create({
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity:  0.1,
     shadowRadius: 1,
   },
-  backButton: {
+  backButton:  {
     padding: 4,
   },
-  title: { 
+  title:  { 
     fontSize: 20, 
     fontWeight: '600',
     color: '#111827',
@@ -409,6 +527,26 @@ const styles = StyleSheet.create({
   formContainer: {
     flex: 1,
     padding: 20,
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems:  'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    padding: 14,
+    borderRadius: 8,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width:  0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  scanButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   inputLabel: {
     fontSize: 14,
@@ -430,13 +568,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   searchInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderWidth:  1,
+    borderColor:  '#d1d5db',
     borderRadius: 8,
     padding: 12,
-    paddingRight: 40, // Make room for the arrow icon
+    paddingRight: 40,
     backgroundColor: '#fff',
-    fontSize: 15,
+    fontSize:  15,
   },
   dropdownArrow: {
     position: 'absolute',
@@ -479,7 +617,7 @@ const styles = StyleSheet.create({
   dropdownSubText: {
     fontSize: 13,
     color: '#6b7280',
-    marginTop: 2,
+    marginTop:  2,
   },
   noResults: {
     padding: 12,
@@ -492,7 +630,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'right',
   },
-  button: {
+  button:  {
     backgroundColor: '#2563eb',
     padding: 15,
     borderRadius: 8,
@@ -501,7 +639,7 @@ const styles = StyleSheet.create({
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity:  0.2,
     shadowRadius: 2,
   },
   buttonDisabled: {

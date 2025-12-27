@@ -207,17 +207,20 @@ const FacultyDashboard = () => {
     );
   };
 
+  
   // Filter complaints based on search text
-  const filteredComplaints = complaints.filter((c) => {
+// ✅ UPDATED: Filter and sort complaints (Pending first)
+const filteredComplaints = complaints
+  .filter((c) => {
     if (!searchText) return true;
-    if (! c.isVisible) return false;
+    if (!c. isVisible) return false;
     
-    const s = searchText.toLowerCase();
-    const dateStr = c.date ?  c.date.toLowerCase() : '';
-    const timeStr = moment(c.time, 'HH:mm:ss').format('hh:mm: ss A').toLowerCase();
+    const s = searchText. toLowerCase();
+    const dateStr = c.date ? c.date. toLowerCase() : '';
+    const timeStr = moment(c.time, 'HH:mm:ss').format('hh:mm:ss A').toLowerCase();
 
     return (
-      c.student_name?. toLowerCase().includes(s) ||
+      c.student_name?.toLowerCase().includes(s) ||
       c.student_reg_num?.toLowerCase().includes(s) ||
       c.details?.toLowerCase().includes(s) ||
       c.venue?.toLowerCase().includes(s) ||
@@ -226,6 +229,34 @@ const FacultyDashboard = () => {
       dateStr.includes(s) ||
       timeStr.includes(s)
     );
+  })
+  // ✅ Sort:  Pending first, then others (accepted, rejected, resolved)
+  .sort((a, b) => {
+    // Define status priority:  pending = 0, others = 1
+    const getPriority = (status) => {
+      if (status === 'pending') return 0;
+      if (status === 'accepted') return 1;
+      if (status === 'rejected') return 2;
+      if (status === 'resolved') return 3;
+      return 4;
+    };
+
+    const priorityA = getPriority(a.status);
+    const priorityB = getPriority(b.status);
+
+    // Sort by priority first
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
+    // If same priority, sort by timer (for pending complaints)
+    // Show complaints with more time remaining first
+    if (a.status === 'pending' && b. status === 'pending') {
+      return b.timer - a.timer;
+    }
+
+    // For other statuses, maintain original order
+    return 0;
   });
 
   const renderComplaintCard = (complaint) => {
@@ -379,7 +410,30 @@ const FacultyDashboard = () => {
   };
 
   // Filter visible complaints for display logic
-  const visibleComplaints = searchText ? filteredComplaints : complaints. filter(complaint => complaint.isVisible);
+  const visibleComplaints = searchText ?  filteredComplaints : complaints
+  .filter(complaint => complaint.isVisible)
+  .sort((a, b) => {
+    const getPriority = (status) => {
+      if (status === 'pending') return 0;
+      if (status === 'accepted') return 1;
+      if (status === 'rejected') return 2;
+      if (status === 'resolved') return 3;
+      return 4;
+    };
+
+    const priorityA = getPriority(a.status);
+    const priorityB = getPriority(b.status);
+
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
+    if (a.status === 'pending' && b.status === 'pending') {
+      return b.timer - a.timer;
+    }
+
+    return 0;
+  });
 
   return (
     <View style={styles.container} edges={['right', 'bottom', 'left']}>

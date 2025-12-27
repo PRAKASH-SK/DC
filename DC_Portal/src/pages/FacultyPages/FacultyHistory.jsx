@@ -18,20 +18,76 @@ import { useNavigation } from '@react-navigation/native';
 import moment from 'moment';
 
 // Header Component
-const HistoryHeader = ({ onSearchToggle, searchVisible }) => {
+const HistoryHeader = ({ onSearchToggle, searchVisible, onSortToggle }) => {
   return (
     <View style={styles.headerContainer}>
       <Text style={styles.pageTitle}>My History</Text>
-      <TouchableOpacity 
-        style={styles. searchIconButton}
-        onPress={onSearchToggle}
+      <View style={styles.headerButtons}>
+        <TouchableOpacity 
+          style={styles.searchIconButton}
+          onPress={onSortToggle}
+        >
+          <Ionicons name="funnel-outline" size={24} color="#6366f1" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.searchIconButton}
+          onPress={onSearchToggle}
+        >
+          <Ionicons 
+            name={searchVisible ? "close-outline" : "search-outline"} 
+            size={24} 
+            color="#6366f1" 
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+// ✅ NEW: Sort Options Component
+const SortOptions = ({ selectedSort, onSortChange }) => {
+  const sortOptions = [
+    { label: 'All', value: 'all', icon: 'list-outline', color: '#6366f1' },
+    { label: 'Pending', value: 'pending', icon: 'time-outline', color: '#ad954b' },
+    { label: 'Accepted', value:  'accepted', icon: 'checkmark-circle-outline', color: '#22c55e' },
+    { label: 'Rejected', value:  'rejected', icon: 'close-circle-outline', color:  '#ef4444' },
+    { label: 'Resolved', value: 'resolved', icon:  'checkmark-done-circle-outline', color: '#6366f1' },
+  ];
+
+  return (
+    <View style={styles.sortContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.sortScrollContent}
       >
-        <Ionicons 
-          name={searchVisible ? "close-outline" : "search-outline"} 
-          size={24} 
-          color="#6366f1" 
-        />
-      </TouchableOpacity>
+        {sortOptions.map((option) => {
+          const isSelected = selectedSort === option.value;
+          return (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortChip,
+                isSelected && { backgroundColor: option.color }
+              ]}
+              onPress={() => onSortChange(option.value)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name={option.icon} 
+                size={18} 
+                color={isSelected ? '#fff' : option.color} 
+              />
+              <Text style={[
+                styles.sortChipText,
+                isSelected && styles.sortChipTextActive
+              ]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 };
@@ -45,7 +101,7 @@ const SearchFilterBar = ({
   onClearDate 
 }) => {
   return (
-    <View style={styles. searchFilterContainer}>
+    <View style={styles.searchFilterContainer}>
       {/* Search and Calendar Row */}
       <View style={styles.filterContainer}>
         <View style={styles.searchContainer}>
@@ -93,12 +149,12 @@ const ComplaintCard = ({ complaint, searchText, highlightText }) => {
     badgeStyle = styles.rejectedBadge;
     textStyle = styles.rejectedText;
   } else if (complaint.status?. toLowerCase() === 'resolved') {
-    badgeStyle = styles. resolvedBadge;
+    badgeStyle = styles.resolvedBadge;
     textStyle = styles.resolvedText;
   }
 
   const dateFormatted = moment(complaint.complaint_date).format('DD-MM-YYYY');
-  const timeFormatted = moment(complaint. complaint_time, 'HH:mm: ss').format('hh:mm: ss A');
+  const timeFormatted = moment(complaint. complaint_time, 'HH:mm:ss').format('hh:mm: ss A');
 
   return (
     <View style={styles.card}>
@@ -115,7 +171,7 @@ const ComplaintCard = ({ complaint, searchText, highlightText }) => {
 
       <View style={styles.cardContent}>
         <View style={styles.complaintRow}>
-          <Text style={styles. label}>Student Name:</Text>
+          <Text style={styles.label}>Student Name:</Text>
           <Text style={styles.valueText}>
             {highlightText(complaint.student_name, searchText)}
           </Text>
@@ -124,7 +180,7 @@ const ComplaintCard = ({ complaint, searchText, highlightText }) => {
         <View style={styles.complaintRow}>
           <Text style={styles.label}>Register Number:</Text>
           <Text style={styles.valueText}>
-            {highlightText(complaint. student_reg_num, searchText)}
+            {highlightText(complaint.student_reg_num, searchText)}
           </Text>
         </View>
 
@@ -165,15 +221,6 @@ const ComplaintCard = ({ complaint, searchText, highlightText }) => {
           </View>
         )}
 
-        {/* Show status message for resolved complaints */}
-        {complaint.status?.toLowerCase() === 'resolved' && (
-          <View style={styles. statusMessageContainer}>
-            <Ionicons name="checkmark-done-circle" size={20} color="#6366f1" />
-            <Text style={styles.resolvedStatusMessage}>
-              This complaint has been resolved
-            </Text>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -186,7 +233,8 @@ const CardsContainer = ({
   highlightText,
   refreshing,
   onRefresh,
-  selectedDate 
+  selectedDate,
+  selectedSort
 }) => {
   if (complaints.length === 0) {
     return (
@@ -198,22 +246,22 @@ const CardsContainer = ({
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            colors={['#e63946']}
-            tintColor="#e63946" 
+            colors={['#6366f1']}
+            tintColor="#6366f1" 
           />
         }
       >
         <View style={styles.emptyContainer}>
           <Ionicons name="document-text-outline" size={64} color="#d1d5db" />
           <Text style={styles.emptyText}>
-            {selectedDate || searchText 
+            {selectedDate || searchText || selectedSort !== 'all'
               ? "No complaints found for the selected criteria" 
               : "No complaint history found"
             }
           </Text>
           <Text style={styles.emptySubtext}>
-            {selectedDate || searchText 
-              ? "Try adjusting your search or date filter" 
+            {selectedDate || searchText || selectedSort !== 'all'
+              ?  "Try adjusting your filters" 
               : "Your complaint records will appear here"
             }
           </Text>
@@ -225,14 +273,14 @@ const CardsContainer = ({
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
-      style={styles.scrollView}
-      contentContainerStyle={styles. scrollContent}
+      style={styles. scrollView}
+      contentContainerStyle={styles.scrollContent}
       refreshControl={
         <RefreshControl 
           refreshing={refreshing} 
           onRefresh={onRefresh}
-          colors={['#e63946']}
-          tintColor="#e63946" 
+          colors={['#6366f1']}
+          tintColor="#6366f1" 
         />
       }
     >
@@ -250,7 +298,7 @@ const CardsContainer = ({
   );
 };
 
-// Custom Calendar Component
+// Custom Calendar Component (Keep existing code)
 const CustomCalendar = ({ date, onDateChange }) => {
   const [currentMonth, setCurrentMonth] = useState(moment(date));
   const [selectedDay, setSelectedDay] = useState(moment(date).date());
@@ -259,7 +307,7 @@ const CustomCalendar = ({ date, onDateChange }) => {
   const startOfMonth = currentMonth.clone().startOf('month');
   const endOfMonth = currentMonth.clone().endOf('month');
   const startOfWeek = startOfMonth.clone().startOf('week');
-  const endOfWeek = endOfMonth. clone().endOf('week');
+  const endOfWeek = endOfMonth.clone().endOf('week');
 
   const days = [];
   let day = startOfWeek.clone();
@@ -278,7 +326,7 @@ const CustomCalendar = ({ date, onDateChange }) => {
   };
 
   const selectDate = (selectedDay) => {
-    const newDate = currentMonth.clone().date(selectedDay.date());
+    const newDate = currentMonth.clone().date(selectedDay. date());
     setSelectedDay(selectedDay. date());
     onDateChange(newDate. toDate());
   };
@@ -317,7 +365,7 @@ const CustomCalendar = ({ date, onDateChange }) => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.weekDaysHeader}>
+      <View style={styles. weekDaysHeader}>
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
           <Text key={index} style={styles.weekDayText}>{day}</Text>
         ))}
@@ -361,22 +409,25 @@ const CustomCalendar = ({ date, onDateChange }) => {
   );
 };
 
+
 // Main Component
 const FacultyHistory = () => {
+  // ✅ ALL useState hooks must be at the top, in the same order every time
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [facultyId, setFacultyId] = useState(null);
-  
-  // Search and filter states
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
+  const [selectedSort, setSelectedSort] = useState('all');
+  const [sortVisible, setSortVisible] = useState(false);
   
   const navigation = useNavigation();
 
+  // ... rest of the component stays the same
   useEffect(() => {
     const fetchUserId = async () => {
       try {
@@ -396,7 +447,7 @@ const FacultyHistory = () => {
         `${API_URL}/api/faculty/get_complaints_history/${Number(facultyId)}`,
         {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
+          headers:  { 'Content-Type': 'application/json' },
         }
       );
       const data = await response.json();
@@ -425,7 +476,6 @@ const FacultyHistory = () => {
     fetchComplaintHistory();
   };
 
-  // Toggle search visibility
   const toggleSearch = () => {
     if (searchVisible) {
       setSearchText('');
@@ -434,7 +484,14 @@ const FacultyHistory = () => {
     setSearchVisible(!searchVisible);
   };
 
-  // Date picker handlers
+  const toggleSort = () => {
+    setSortVisible(!sortVisible);
+  };
+
+  const handleSortChange = (sortValue) => {
+    setSelectedSort(sortValue);
+  };
+
   const openDatePicker = () => {
     setTempDate(selectedDate || new Date());
     setIsDatePickerOpen(true);
@@ -453,7 +510,6 @@ const FacultyHistory = () => {
     setSelectedDate(null);
   };
 
-  // highlight helper
   const highlightText = (text, searchText) => {
     if (!searchText) return <Text>{text}</Text>;
     const string = text?. toString() ??  '';
@@ -476,9 +532,13 @@ const FacultyHistory = () => {
     );
   };
 
-  // filter complaints based on search text and selected date
-  const filteredComplaints = complaints.filter((c) => {
-    // Date filter
+  const filteredComplaints = complaints. filter((c) => {
+    if (selectedSort !== 'all') {
+      if (c.status?. toLowerCase() !== selectedSort.toLowerCase()) {
+        return false;
+      }
+    }
+
     if (selectedDate) {
       const complaintDate = moment(c.complaint_date).format('YYYY-MM-DD');
       const filterDate = moment(selectedDate).format('YYYY-MM-DD');
@@ -487,28 +547,27 @@ const FacultyHistory = () => {
       }
     }
 
-    // Text filter
     if (! searchText) return true;
     const s = searchText.toLowerCase();
 
-    const timeStr = moment(c.complaint_time, 'HH:mm:ss')
-      .format('hh:mm:ss A')
+    const timeStr = moment(c.complaint_time, 'HH:mm: ss')
+      .format('hh:mm: ss A')
       .toLowerCase();
 
     return (
-      c.student_name?.toLowerCase().includes(s) ||
+      c.student_name?. toLowerCase().includes(s) ||
       c.student_reg_num?.toLowerCase().includes(s) ||
-      c.complaint?.toLowerCase().includes(s) ||
+      c.complaint?. toLowerCase().includes(s) ||
       c.venue?.toLowerCase().includes(s) ||
       c.status?.toLowerCase().includes(s) ||
       c.complaint_id?.toString().toLowerCase().includes(s) ||
-      timeStr. includes(s)
+      timeStr.includes(s)
     );
   });
 
   if (loading) {
     return (
-      <View style={styles. container}>
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6366f1" />
           <Text style={styles.loadingText}>Loading complaint history...</Text>
@@ -518,15 +577,21 @@ const FacultyHistory = () => {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header Component */}
+    <View style={styles. container}>
       <View style={styles.headerWrapper}>
         <HistoryHeader 
           onSearchToggle={toggleSearch}
           searchVisible={searchVisible}
+          onSortToggle={toggleSort}
         />
 
-        {/* Search Filter Bar */}
+        {sortVisible && (
+          <SortOptions 
+            selectedSort={selectedSort}
+            onSortChange={handleSortChange}
+          />
+        )}
+
         {searchVisible && (
           <SearchFilterBar
             searchText={searchText}
@@ -538,8 +603,7 @@ const FacultyHistory = () => {
         )}
       </View>
 
-      {/* Cards Container Component */}
-      <View style={styles.cardsWrapper}>
+      <View style={styles. cardsWrapper}>
         <CardsContainer
           complaints={filteredComplaints}
           searchText={searchText}
@@ -547,10 +611,10 @@ const FacultyHistory = () => {
           refreshing={refreshing}
           onRefresh={onRefresh}
           selectedDate={selectedDate}
+          selectedSort={selectedSort}
         />
       </View>
 
-      {/* Custom Date Picker Modal */}
       <Modal
         visible={isDatePickerOpen}
         transparent={true}
@@ -589,25 +653,23 @@ const FacultyHistory = () => {
 const styles = StyleSheet.create({
   container: {
     flex:  1,
-    backgroundColor: '#f3f4f6', // Gray background
+    backgroundColor: '#f3f4f6',
   },
   
-  // Header Wrapper (White background)
-headerWrapper: {
-  backgroundColor: '#ffffff',
-  paddingHorizontal: 16,
-  paddingTop: 20,
-  paddingBottom: 16,
-  elevation: 2,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.05,
-  shadowRadius: 4,
-  borderBottomWidth: 1,  // Add this
-  borderBottomColor:  "#e9ecef",  // Add this
-},
+  headerWrapper: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
+  },
   
-  // Header styles
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -619,26 +681,58 @@ headerWrapper: {
     fontWeight: '600',
     color: '#6366f1',
   },
+  // ✅ NEW: Header buttons container
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   searchIconButton: {
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#f1f3f5',
+    marginLeft: 8,
   },
   
-  // Search Filter Container
+  // ✅ NEW:  Sort container styles
+  sortContainer: {
+    marginTop: 16,
+  },
+  sortScrollContent: {
+    paddingVertical: 4,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical:  8,
+    borderRadius: 20,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 8,
+  },
+  sortChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginLeft: 6,
+  },
+  sortChipTextActive: {
+    color: '#fff',
+  },
+  
   searchFilterContainer: {
     marginTop: 16,
   },
   
-  // Filter container styles
   filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 0,
-    gap: 8,
   },
   searchContainer: {
     flex: 1,
+    marginRight: 8,
   },
   searchInput: {
     height: 40,
@@ -647,7 +741,7 @@ headerWrapper: {
     borderRadius: 8,
     paddingHorizontal: 12,
     backgroundColor: '#f9fafb',
-    fontSize:  14,
+    fontSize: 14,
   },
   calendarButton: {
     width: 40,
@@ -660,10 +754,9 @@ headerWrapper: {
     alignItems: 'center',
   },
   
-  // Selected date display styles
   selectedDateContainer: {
     flexDirection: 'row',
-    alignItems:  'center',
+    alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#e0f2fe',
     paddingHorizontal: 12,
@@ -674,7 +767,7 @@ headerWrapper: {
     borderColor: '#b3e5fc',
   },
   selectedDateText: {
-    fontSize: 14,
+    fontSize:  14,
     color: '#0277bd',
     fontWeight: '500',
   },
@@ -682,13 +775,11 @@ headerWrapper: {
     padding: 2,
   },
   
-  // Cards Wrapper (Gray background with padding)
   cardsWrapper: {
-    flex: 1,
+    flex:  1,
     backgroundColor: '#f3f4f6',
   },
   
-  // Scrollview styles
   scrollView: { 
     flex: 1,
   },
@@ -735,7 +826,6 @@ headerWrapper: {
     gap: 16,
   },
   
-  // Card styles (White background)
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 12,
@@ -761,7 +851,7 @@ headerWrapper: {
     fontWeight: '700',
     backgroundColor: '#fff1f0',
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical:  2,
     borderRadius: 4,
   },
   statusBadge: {
@@ -780,7 +870,7 @@ headerWrapper: {
   acceptedBadge: { backgroundColor:  '#dcfce7' },
   acceptedText: { color: '#22c55e' },
   rejectedBadge: { backgroundColor:  '#fcdcdc' },
-  rejectedText:  { color: '#ef4444' },
+  rejectedText: { color: '#ef4444' },
   resolvedBadge: { backgroundColor:  '#e0e7ff' },
   resolvedText: { color: '#6366f1' },
   cardContent: {
@@ -803,33 +893,18 @@ headerWrapper: {
     flex: 1,
     lineHeight: 20,
   },
-  statusMessageContainer: {
-    flexDirection:  'row',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginTop: 12,
-    gap: 8,
-  },
-  resolvedStatusMessage: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6366f1',
-    flex: 1,
-  },
+
   
-  // Calendar Modal styles
+  // Calendar styles (keep existing)
   modalOverlay: {
-    flex: 1,
+    flex:  1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent:  'center',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
   },
   datePickerModal: {
-    backgroundColor: '#fff',
+    backgroundColor:  '#fff',
     borderRadius: 12,
     overflow: 'hidden',
     width: '100%',
@@ -850,7 +925,7 @@ headerWrapper: {
   },
   calendarHeaderText: {
     color: '#fff',
-    fontSize:  12,
+    fontSize: 12,
     fontWeight: '600',
     letterSpacing: 1,
   },
@@ -934,7 +1009,7 @@ headerWrapper: {
     color:  '#333',
     fontWeight: '600',
   },
-  selectedDayText: {
+  selectedDayText:  {
     color: '#fff',
     fontWeight: '600',
   },
@@ -947,11 +1022,11 @@ headerWrapper: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#f8f9fa',
-    gap: 16,
   },
   cancelButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
+    marginRight: 16,
   },
   confirmButton: {
     paddingVertical: 8,

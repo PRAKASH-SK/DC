@@ -93,12 +93,7 @@ const AdminDashboard = () => {
     }
   }, [searchText, students]);
 
-  const toggleHeaderSearch = () => {
-    if (headerSearchVisible) {
-      setHeaderSearchText("");
-    }
-    setHeaderSearchVisible(!headerSearchVisible);
-  };
+
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -352,16 +347,6 @@ const AdminDashboard = () => {
             <Text style={styles.headerText}>Welcome Back</Text>
             <Text style={styles.headerSubText}>{adminName}</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.searchIconContainer}
-            onPress={toggleHeaderSearch}
-          >
-            <Ionicons 
-              name={headerSearchVisible ?  "close" : "search"} 
-              size={22} 
-              color="#fff" 
-            />
-          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -653,11 +638,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
-  searchIconContainer: {
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
+ 
   headerSearchContainer: {
     paddingHorizontal: 20,
     paddingVertical: 12,

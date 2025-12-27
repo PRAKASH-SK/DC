@@ -31,10 +31,10 @@ export default function AdminLayout() {
                 iconName = 'history';
                 break;
               case 'RejectedComplaints':
-                iconName = 'calendar-clock';
+                iconName = 'thumb-down-outline';
                 break;
               case 'ScheduledMeetings':
-                iconName = 'account';
+                iconName = 'calendar-clock';
                 break;
               default:
                 iconName = 'help';

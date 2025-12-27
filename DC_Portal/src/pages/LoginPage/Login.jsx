@@ -17,6 +17,8 @@ import { API_URL } from '../../utils/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { GOOGLE_WEB_CLIENT_ID } from '@env';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -223,11 +225,10 @@ const Login = ({ navigation }) => {
           navigation.navigate('AdminLayout');
         }
       } else {
-        Alert.alert('Google Sign-In Failed', data.message || 'Unauthorized.');
+        Alert.alert('Google Sign-In Failed  Unauthorized.');
       }
     } catch (error) {
-      console.error('Google Sign-In Error:', error);
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED){
         // user cancelled
       } else if (error.code === statusCodes.IN_PROGRESS) {
         Alert.alert('In Progress', 'Sign-in is already in progress');
@@ -240,7 +241,7 @@ const Login = ({ navigation }) => {
           Alert.alert('Error', error.response.data?.message || 'Server error during Google sign-in');
         }
       } else {
-        Alert.alert('Error', error.message || 'An error occurred during sign-in');
+        Alert.alert('Not Registered', 'No such email found. Please contact admin.', [{ text: 'OK' }]);
       }
     } finally {
       setIsLoading(false);

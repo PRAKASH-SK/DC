@@ -17,21 +17,77 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import moment from 'moment';
 
-// Header Component
-const HistoryHeader = ({ onSearchToggle, searchVisible }) => {
+// ✅ NEW: Sort Options Component
+const SortOptions = ({ selectedSort, onSortChange }) => {
+  const sortOptions = [
+    { label: 'All', value: 'all', icon: 'list-outline', color: '#6366f1' },
+    { label: 'Pending', value: 'pending', icon: 'time-outline', color: '#ad954b' },
+    { label: 'Accepted', value:  'accepted', icon: 'checkmark-circle-outline', color: '#22c55e' },
+    { label: 'Rejected', value:  'rejected', icon: 'close-circle-outline', color:  '#ef4444' },
+    { label: 'Resolved', value: 'resolved', icon:  'checkmark-done-circle-outline', color: '#6366f1' },
+  ];
+
+  return (
+    <View style={styles.sortContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.sortScrollContent}
+      >
+        {sortOptions.map((option) => {
+          const isSelected = selectedSort === option.value;
+          return (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortChip,
+                isSelected && { backgroundColor: option.color }
+              ]}
+              onPress={() => onSortChange(option.value)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name={option.icon} 
+                size={18} 
+                color={isSelected ? '#fff' : option.color} 
+              />
+              <Text style={[
+                styles.sortChipText,
+                isSelected && styles.sortChipTextActive
+              ]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+};
+
+// ✅ UPDATED: Header Component
+const HistoryHeader = ({ onSearchToggle, searchVisible, onSortToggle }) => {
   return (
     <View style={styles.headerContainer}>
       <Text style={styles.pageTitle}>My History</Text>
-      <TouchableOpacity 
-        style={styles.searchIconButton}
-        onPress={onSearchToggle}
-      >
-        <Ionicons 
-          name={searchVisible ? "close-outline" : "search-outline"} 
-          size={24} 
-          color="#6366f1" 
-        />
-      </TouchableOpacity>
+      <View style={styles.headerButtons}>
+        <TouchableOpacity 
+          style={styles.searchIconButton}
+          onPress={onSortToggle}
+        >
+          <Ionicons name="funnel-outline" size={24} color="#6366f1" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.searchIconButton}
+          onPress={onSearchToggle}
+        >
+          <Ionicons 
+            name={searchVisible ? "close-outline" : "search-outline"} 
+            size={24} 
+            color="#6366f1" 
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -45,12 +101,12 @@ const SearchFilterBar = ({
   onClearDate 
 }) => {
   return (
-    <View style={styles. searchFilterContainer}>
+    <View style={styles.searchFilterContainer}>
       {/* Search and Calendar Row */}
       <View style={styles.filterContainer}>
         <View style={styles.searchContainer}>
           <TextInput
-            style={styles.searchInput}
+            style={styles. searchInput}
             placeholder="Search complaints..."
             value={searchText}
             onChangeText={onSearchChange}
@@ -69,7 +125,7 @@ const SearchFilterBar = ({
       {/* Selected Date Display */}
       {selectedDate && (
         <View style={styles.selectedDateContainer}>
-          <Text style={styles.selectedDateText}>
+          <Text style={styles. selectedDateText}>
             Filtered by: {moment(selectedDate).format('DD-MM-YYYY')}
           </Text>
           <TouchableOpacity onPress={onClearDate} style={styles.clearDateButton}>
@@ -86,24 +142,24 @@ const ComplaintCard = ({ complaint, searchText, highlightText }) => {
   let badgeStyle = styles.pendingBadge;
   let textStyle = styles.pendingText;
   
-  if (complaint. status === 'accepted') {
+  if (complaint.status === 'accepted') {
     badgeStyle = styles.acceptedBadge;
     textStyle = styles.acceptedText;
   } else if (complaint.status === 'rejected') {
     badgeStyle = styles.rejectedBadge;
     textStyle = styles.rejectedText;
   } else if (complaint.status?. toLowerCase() === 'resolved') {
-    badgeStyle = styles.resolvedBadge;
+    badgeStyle = styles. resolvedBadge;
     textStyle = styles.resolvedText;
   }
 
   const dateFormatted = moment(complaint.complaint_date).format('DD-MM-YYYY');
-  const timeFormatted = moment(complaint. complaint_time, 'HH:mm:ss').format('hh:mm:ss A');
+  const timeFormatted = moment(complaint. complaint_time, 'HH:mm: ss').format('hh:mm:ss A');
 
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.codeText}>
+        <Text style={styles. codeText}>
           {highlightText(complaint.complaint_id, searchText)}
         </Text>
         <View style={[styles.statusBadge, badgeStyle]}>
@@ -115,7 +171,7 @@ const ComplaintCard = ({ complaint, searchText, highlightText }) => {
 
       <View style={styles.cardContent}>
         <View style={styles.complaintRow}>
-          <Text style={styles.label}>Complaint Details:</Text>
+          <Text style={styles. label}>Complaint Details:</Text>
           <Text style={styles.valueText}>
             {highlightText(complaint.complaint, searchText)}
           </Text>
@@ -128,7 +184,7 @@ const ComplaintCard = ({ complaint, searchText, highlightText }) => {
           </Text>
         </View>
 
-        <View style={styles.complaintRow}>
+        <View style={styles. complaintRow}>
           <Text style={styles.label}>Complaint Date:</Text>
           <Text style={styles.valueText}>
             {highlightText(dateFormatted, searchText)}
@@ -158,6 +214,15 @@ const ComplaintCard = ({ complaint, searchText, highlightText }) => {
           </View>
         )}
 
+        {/* Show status message for resolved complaints */}
+        {complaint.status?.toLowerCase() === 'resolved' && (
+          <View style={styles. statusMessageContainer}>
+            <Ionicons name="checkmark-done-circle" size={20} color="#6366f1" />
+            <Text style={styles.resolvedStatusMessage}>
+              This complaint has been resolved
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -170,7 +235,8 @@ const CardsContainer = ({
   highlightText,
   refreshing,
   onRefresh,
-  selectedDate 
+  selectedDate,
+  selectedSort
 }) => {
   if (complaints.length === 0) {
     return (
@@ -182,22 +248,22 @@ const CardsContainer = ({
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh} 
-            colors={['#e63946']}
-            tintColor="#e63946"
+            colors={['#6366f1']}
+            tintColor="#6366f1"
           />
         }
       >
         <View style={styles.emptyContainer}>
           <Ionicons name="document-text-outline" size={64} color="#d1d5db" />
           <Text style={styles.emptyText}>
-            {selectedDate || searchText 
-              ? "No complaints found for the selected criteria" 
+            {selectedDate || searchText || selectedSort !== 'all'
+              ? "No complaints match your filters" 
               : "No complaint history found"
             }
           </Text>
           <Text style={styles.emptySubtext}>
-            {selectedDate || searchText 
-              ? "Try adjusting your search or date filter" 
+            {selectedDate || searchText || selectedSort !== 'all'
+              ?  "Try adjusting your search or filters" 
               : "Your complaint records will appear here"
             }
           </Text>
@@ -215,13 +281,13 @@ const CardsContainer = ({
         <RefreshControl 
           refreshing={refreshing} 
           onRefresh={onRefresh} 
-          colors={['#e63946']}
-          tintColor="#e63946"
+          colors={['#6366f1']}
+          tintColor="#6366f1"
         />
       }
     >
       <View style={styles.cardsContainer}>
-        {complaints. map((complaint, index) => (
+        {complaints.map((complaint, index) => (
           <ComplaintCard 
             key={index} 
             complaint={complaint} 
@@ -234,7 +300,7 @@ const CardsContainer = ({
   );
 };
 
-// Custom Calendar Component
+// Custom Calendar Component (keep existing)
 const CustomCalendar = ({ date, onDateChange }) => {
   const [currentMonth, setCurrentMonth] = useState(moment(date));
   const [selectedDay, setSelectedDay] = useState(moment(date).date());
@@ -243,7 +309,7 @@ const CustomCalendar = ({ date, onDateChange }) => {
   const startOfMonth = currentMonth.clone().startOf('month');
   const endOfMonth = currentMonth.clone().endOf('month');
   const startOfWeek = startOfMonth.clone().startOf('week');
-  const endOfWeek = endOfMonth.clone().endOf('week');
+  const endOfWeek = endOfMonth. clone().endOf('week');
 
   const days = [];
   let day = startOfWeek.clone();
@@ -347,17 +413,18 @@ const CustomCalendar = ({ date, onDateChange }) => {
 
 // Main Component
 const History = () => {
+  // ✅ ALL useState hooks at the top
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [studentId, setStudentId] = useState(null);
-  
-  // Search and filter states
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
+  const [selectedSort, setSelectedSort] = useState('all');  // ✅ NEW
+  const [sortVisible, setSortVisible] = useState(false);    // ✅ NEW
   
   const navigation = useNavigation();
 
@@ -415,6 +482,16 @@ const History = () => {
     setSearchVisible(!searchVisible);
   };
 
+  // ✅ NEW: Toggle sort visibility
+  const toggleSort = () => {
+    setSortVisible(!sortVisible);
+  };
+
+  // ✅ NEW: Handle sort change
+  const handleSortChange = (sortValue) => {
+    setSelectedSort(sortValue);
+  };
+
   // Date picker handlers
   const openDatePicker = () => {
     setTempDate(selectedDate || new Date());
@@ -457,8 +534,15 @@ const History = () => {
     );
   };
 
-  // Filter complaints based on search text and selected date
+  // ✅ UPDATED: Filter complaints with sort logic
   const filteredComplaints = complaints.filter((c) => {
+    // Sort filter
+    if (selectedSort !== 'all') {
+      if (c.status?.toLowerCase() !== selectedSort. toLowerCase()) {
+        return false;
+      }
+    }
+
     // Date filter
     if (selectedDate) {
       const complaintDate = moment(c.complaint_date).format('YYYY-MM-DD');
@@ -474,11 +558,11 @@ const History = () => {
     const timeStr = moment(c.complaint_time, 'HH:mm:ss').format('hh:mm:ss A').toLowerCase();
 
     return (
-      c.faculty_name?. toLowerCase().includes(s) ||
+      c.faculty_name?.toLowerCase().includes(s) ||
       c.complaint?.toLowerCase().includes(s) ||
       c.venue?.toLowerCase().includes(s) ||
       c.status?.toLowerCase().includes(s) ||
-      c.complaint_id?. toString().toLowerCase().includes(s) ||
+      c.complaint_id?.toString().toLowerCase().includes(s) ||
       timeStr.includes(s) ||
       c.revoke_message?.toLowerCase().includes(s)
     );
@@ -496,13 +580,24 @@ const History = () => {
   }
 
   return (
-    <View style={styles. container}>
+    <View style={styles.container}>
       {/* Header Component */}
       <View style={styles.headerWrapper}>
         <HistoryHeader 
           onSearchToggle={toggleSearch}
           searchVisible={searchVisible}
+          onSortToggle={toggleSort}
         />
+
+        {/* ✅ NEW: Sort Options */}
+        {sortVisible && (
+          <View style={styles.sortWrapper}>
+            <SortOptions 
+              selectedSort={selectedSort}
+              onSortChange={handleSortChange}
+            />
+          </View>
+        )}
 
         {/* Search Filter Bar */}
         {searchVisible && (
@@ -525,6 +620,7 @@ const History = () => {
           refreshing={refreshing}
           onRefresh={onRefresh}
           selectedDate={selectedDate}
+          selectedSort={selectedSort}
         />
       </View>
 
@@ -575,7 +671,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 16,
+    paddingBottom:  16,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -597,10 +693,47 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6366f1',
   },
+  // ✅ NEW: Header buttons container
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   searchIconButton: {
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#f1f3f5',
+    marginLeft: 8,
+  },
+  
+  // ✅ NEW: Sort wrapper and styles
+  sortWrapper: {
+    marginTop: 16,
+  },
+  sortContainer: {
+    paddingVertical: 4,
+  },
+  sortScrollContent: {
+    paddingVertical: 4,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical:  8,
+    borderRadius: 20,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 8,
+  },
+  sortChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginLeft: 6,
+  },
+  sortChipTextActive: {
+    color: '#fff',
   },
   
   // Search Filter Container
@@ -613,10 +746,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 0,
-    gap: 8,
   },
   searchContainer: {
     flex: 1,
+    marginRight: 8,
   },
   searchInput: {
     height: 40,
@@ -718,34 +851,34 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
-    elevation:  2,
-    shadowColor:  '#000',
-    shadowOffset:  { width: 0, height:  1 },
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity:  0.05,
     shadowRadius: 3,
   },
   cardHeader: {
     marginBottom: 16,
     flexDirection: 'row',
-    justifyContent:  'space-between',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignItems:  'center',
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#e9ecef",
   },
   codeText: {
-    fontSize:  14,
+    fontSize: 14,
     color: "#e63946",
     fontWeight: "700",
     backgroundColor: "#fff1f0",
     paddingHorizontal: 8,
-    paddingVertical:  2,
+    paddingVertical: 2,
     borderRadius: 4,
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical:  4,
-    borderRadius:  20,
+    borderRadius: 20,
   },
   statusText: {
     fontSize: 12,
@@ -758,7 +891,7 @@ const styles = StyleSheet.create({
   acceptedBadge: { backgroundColor:  "#dcfce7" },
   acceptedText: { color: "#22c55e" },
   rejectedBadge: { backgroundColor:  "#fcdcdc" },
-  rejectedText:  { color: "#ef4444" },
+  rejectedText: { color: "#ef4444" },
   resolvedBadge: { backgroundColor:  "#e0e7ff" },
   resolvedText: { color: "#6366f1" },
   cardContent: {
@@ -783,31 +916,31 @@ const styles = StyleSheet.create({
   },
   statusMessageContainer: {
     flexDirection:  'row',
-    alignItems:  'center',
+    alignItems: 'center',
     backgroundColor: '#f3f4f6',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
     marginTop: 12,
-    gap: 8,
   },
   resolvedStatusMessage: {
     fontSize: 14,
     fontWeight: '600',
     color: '#6366f1',
     flex: 1,
+    marginLeft: 8,
   },
   
-  // Calendar Modal styles
+  // Calendar Modal styles (keep all existing)
   modalOverlay: {
-    flex:  1,
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
   },
   datePickerModal: {
-    backgroundColor: '#fff',
+    backgroundColor:  '#fff',
     borderRadius: 12,
     overflow: 'hidden',
     width: '100%',
@@ -860,8 +993,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   monthYearText: {
-    fontSize:  16,
-    fontWeight:  '500',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#333',
   },
   weekDaysHeader: {
@@ -884,7 +1017,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   dayButton: {
-    width: '14.28%',
+    width: '14. 28%',
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -917,7 +1050,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   futureDayText: {
-    color: '#ccc',
+    color:  '#ccc',
   },
   datePickerButtons: {
     flexDirection: 'row',
@@ -925,11 +1058,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#f8f9fa',
-    gap: 16,
   },
   cancelButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
+    marginRight: 16,
   },
   confirmButton: {
     paddingVertical: 8,

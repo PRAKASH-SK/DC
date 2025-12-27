@@ -23,8 +23,57 @@ import moment from 'moment';
 
 const { width } = Dimensions.get('window');
 
+// ✅ NEW: Sort Options Component
+const SortOptions = ({ selectedSort, onSortChange }) => {
+  const sortOptions = [
+    { label: 'All', value: 'all', icon: 'list-outline', color: '#6366f1' },
+    { label: 'Scheduled', value:  'scheduled', icon: 'time-outline', color: '#ad954b' },
+    { label:  'Present', value: 'present', icon: 'checkmark-circle-outline', color: '#22c55e' },
+    { label: 'Absent', value:  'absent', icon: 'close-circle-outline', color:  '#ef4444' },
+  ];
+
+  return (
+    <View style={styles.sortContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.sortScrollContent}
+      >
+        {sortOptions.map((option) => {
+          const isSelected = selectedSort === option.value;
+          return (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortChip,
+                isSelected && { backgroundColor: option.color }
+              ]}
+              onPress={() => onSortChange(option.value)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name={option.icon} 
+                size={18} 
+                color={isSelected ? '#fff' : option.color} 
+              />
+              <Text style={[
+                styles.sortChipText,
+                isSelected && styles.sortChipTextActive
+              ]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+};
+
 const AdminScheduleMeetings = () => {
   const navigation = useNavigation();
+  
+  // ✅ ALL useState hooks at the top
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adminId, setAdminId] = useState(null);
@@ -33,19 +82,15 @@ const AdminScheduleMeetings = () => {
   const [currentTime, setCurrentTime] = useState(moment());
   const [submittingAttendance, setSubmittingAttendance] = useState({});
   const [submittingComplaintAction, setSubmittingComplaintAction] = useState({});
-  
-  // Search related states
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
-  
-  // Date filter states
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateFilter, setDateFilter] = useState(null);
-  
-  // Calendar states
   const [currentMonth, setCurrentMonth] = useState(moment(new Date()));
   const [tempSelectedDate, setTempSelectedDate] = useState(moment(new Date()));
+  const [selectedSort, setSelectedSort] = useState('all');  // ✅ NEW
+  const [sortVisible, setSortVisible] = useState(false);    // ✅ NEW
 
   // Refs for timers
   const timeUpdateInterval = useRef(null);
@@ -112,7 +157,7 @@ const AdminScheduleMeetings = () => {
           const meetingDateTime = moment(meeting.meeting_date_time);
           const oneHourAfterMeeting = meetingDateTime.clone().add(1, 'hour');
           
-          if (now.isAfter(oneHourAfterMeeting)) {
+          if (now. isAfter(oneHourAfterMeeting)) {
             console.log(`Auto-marking meeting ${meeting.id} as absent`);
             try {
               await markAttendance(meeting.id, 'absent', true);
@@ -176,7 +221,7 @@ const AdminScheduleMeetings = () => {
       if (statusA === 'running' || statusA === 'upcoming') {
         return timeA.diff(timeB);
       } else {
-        return timeB. diff(timeA);
+        return timeB.diff(timeA);
       }
     });
   };
@@ -196,9 +241,6 @@ const AdminScheduleMeetings = () => {
 
   // Check if complaint action buttons should be shown
   const shouldShowComplaintActionButtons = (meeting) => {
-    // Show buttons only if: 
-    // 1. Attendance is marked as present
-    // 2. Complaint status is still pending
     return meeting.attendance === 'present' && meeting.fl_status === 'rejected';
   };
 
@@ -211,7 +253,7 @@ const AdminScheduleMeetings = () => {
     if (now.isBefore(meetingDateTime)) {
       const duration = moment.duration(meetingDateTime.diff(now));
       const hours = Math.floor(duration.asHours());
-      const minutes = duration.minutes();
+      const minutes = duration. minutes();
       const seconds = duration.seconds();
       
       if (hours > 0) {
@@ -268,7 +310,7 @@ const AdminScheduleMeetings = () => {
 
       const response = await axios.post(`${API_URL}/api/admin/post_attendance`, {
         meeting_id: meetingId,
-        attendance:  attendance
+        attendance: attendance
       });
 
       if (response.data.success) {
@@ -303,7 +345,7 @@ const AdminScheduleMeetings = () => {
       }
     } finally {
       if (!isAutoAbsent) {
-        setSubmittingAttendance(prev => ({ ...prev, [meetingId]: false }));
+        setSubmittingAttendance(prev => ({ ... prev, [meetingId]: false }));
       }
     }
   };
@@ -319,7 +361,6 @@ const AdminScheduleMeetings = () => {
       });
 
       if (response.data.success) {
-        // Update local state
         setMeetings(prevMeetings =>
           prevMeetings.map(m =>
             m.id === meetingId ? { ...m, fl_status: action } : m
@@ -392,6 +433,16 @@ const AdminScheduleMeetings = () => {
       setDateFilter(null);
     }
     setSearchVisible(!searchVisible);
+  };
+
+  // ✅ NEW: Toggle sort visibility
+  const toggleSort = () => {
+    setSortVisible(!sortVisible);
+  };
+
+  // ✅ NEW: Handle sort change
+  const handleSortChange = (sortValue) => {
+    setSelectedSort(sortValue);
   };
 
   const handleRefresh = async () => {
@@ -467,7 +518,6 @@ const AdminScheduleMeetings = () => {
     }, [adminId])
   );
 
-  // Navigation to detail screen
   const handleCardPress = (meeting) => {
     navigation.navigate('MeetingDetails', { meeting:  meeting });
   };
@@ -484,7 +534,7 @@ const AdminScheduleMeetings = () => {
   };
 
   const goToNextMonth = () => {
-    setCurrentMonth(currentMonth.clone().add(1, 'month'));
+    setCurrentMonth(currentMonth. clone().add(1, 'month'));
   };
 
   const selectCalendarDate = (selectedDay) => {
@@ -529,7 +579,7 @@ const AdminScheduleMeetings = () => {
     const endOfWeek = endOfMonth.clone().endOf('week');
 
     const days = [];
-    let day = startOfWeek.clone();
+    let day = startOfWeek. clone();
 
     while (day.isSameOrBefore(endOfWeek, 'day')) {
       days.push(day.clone());
@@ -543,7 +593,7 @@ const AdminScheduleMeetings = () => {
     if (!searchText) return <Text>{text}</Text>;
     const string = text?. toString() ??  '';
     const lowerText = string.toLowerCase();
-    const lowerSearch = searchText.toLowerCase();
+    const lowerSearch = searchText. toLowerCase();
     const index = lowerText.indexOf(lowerSearch);
 
     if (index === -1) return <Text>{text}</Text>;
@@ -561,12 +611,23 @@ const AdminScheduleMeetings = () => {
     );
   };
 
+  // ✅ UPDATED: Filter meetings with sort logic
   const filteredMeetings = sortMeetingsByStatus(
     meetings.filter((m) => {
+      // Sort filter
+      if (selectedSort !== 'all') {
+        const attendanceStatus = m.attendance || 'scheduled';
+        if (attendanceStatus. toLowerCase() !== selectedSort.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // Date filter
       if (dateFilter && m.date !== dateFilter) {
         return false;
       }
 
+      // Search filter
       if (! searchText) return true;
       
       const s = searchText.toLowerCase();
@@ -577,7 +638,7 @@ const AdminScheduleMeetings = () => {
         m.student_reg_num?.toLowerCase().includes(s) ||
         m.faculty_name?.toLowerCase().includes(s) ||
         m.meeting_venue?.toLowerCase().includes(s) ||
-        m.info?. toLowerCase().includes(s) ||
+        m.info?.toLowerCase().includes(s) ||
         m.fl_complaint?.toLowerCase().includes(s) ||
         m.complaint_id?.toString().toLowerCase().includes(s) ||
         m.date?.toLowerCase().includes(s) ||
@@ -675,7 +736,7 @@ const AdminScheduleMeetings = () => {
             <Text style={styles.valueText}>
               {highlightText(
                 meeting.student_name
-                  ? meeting.student_name.charAt(0).toUpperCase() + meeting.student_name.slice(1).toLowerCase()
+                  ?  meeting.student_name. charAt(0).toUpperCase() + meeting.student_name.slice(1).toLowerCase()
                   : '',
                 searchText
               )}
@@ -687,8 +748,8 @@ const AdminScheduleMeetings = () => {
             <Text style={styles.valueText}>
               {highlightText(
                 meeting.faculty_name
-                  ? meeting.faculty_name.charAt(0).toUpperCase() + meeting.faculty_name.slice(1).toLowerCase()
-                  :  '',
+                  ?  meeting.faculty_name.charAt(0).toUpperCase() + meeting.faculty_name.slice(1).toLowerCase()
+                  : '',
                 searchText
               )}
             </Text>
@@ -735,7 +796,7 @@ const AdminScheduleMeetings = () => {
                   styles.presentButton,
                   isSubmittingAttendance && styles.disabledButton
                 ]}
-                onPress={() => handleAttendancePress(meeting.id, 'present')}
+                onPress={() => handleAttendancePress(meeting. id, 'present')}
                 disabled={isSubmittingAttendance}
               >
                 {isSubmittingAttendance ?  (
@@ -750,11 +811,11 @@ const AdminScheduleMeetings = () => {
 
               <TouchableOpacity
                 style={[
-                  styles.attendanceButton,
+                  styles. attendanceButton,
                   styles.absentButton,
                   isSubmittingAttendance && styles.disabledButton
                 ]}
-                onPress={() => handleAttendancePress(meeting.id, 'absent')}
+                onPress={() => handleAttendancePress(meeting. id, 'absent')}
                 disabled={isSubmittingAttendance}
               >
                 {isSubmittingAttendance ? (
@@ -819,7 +880,7 @@ const AdminScheduleMeetings = () => {
     );
   };
 
-  // Custom Calendar Component
+  // Custom Calendar Component (keep existing renderCalendar function)
   const renderCalendar = () => {
     const days = getCalendarDays();
 
@@ -834,7 +895,7 @@ const AdminScheduleMeetings = () => {
           <View style={styles.datePickerModal}>
             <View style={styles.calendarContainer}>
               <View style={styles.calendarHeader}>
-                <Text style={styles. calendarHeaderText}>SELECT DATE</Text>
+                <Text style={styles.calendarHeaderText}>SELECT DATE</Text>
               </View>
 
               <View style={styles.selectedDateDisplay}>
@@ -867,7 +928,7 @@ const AdminScheduleMeetings = () => {
               </View>
 
               <View style={styles.calendarGrid}>
-                {days. map((day, index) => {
+                {days.map((day, index) => {
                   const isCurrentMonthDay = isCurrentMonth(day);
                   const isTodayDay = isToday(day);
                   const isSelectedDay = isSelected(day);
@@ -891,7 +952,7 @@ const AdminScheduleMeetings = () => {
                           isSelectedDay && styles.selectedDayText,
                         ]}
                       >
-                        {day.date()}
+                        {day. date()}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -899,7 +960,7 @@ const AdminScheduleMeetings = () => {
               </View>
             </View>
             
-            <View style={styles. datePickerButtons}>
+            <View style={styles.datePickerButtons}>
               <TouchableOpacity 
                 style={styles.cancelButton} 
                 onPress={handleCalendarCancel}
@@ -928,24 +989,44 @@ const AdminScheduleMeetings = () => {
         <View style={styles.HeaderTextContainer}>
           <Text style={styles.HeaderText}>Scheduled Meetings</Text>
           <Text style={styles.currentTimeText}>
-            {currentTime.format('hh:mm: ss A')}
+            {currentTime.format('hh:mm:ss A')}
           </Text>
         </View>
         
-        <TouchableOpacity 
-          style={styles.searchIconContainer}
-          onPress={toggleSearch}
-        >
-          <Ionicons 
-            name={searchVisible ? "close-outline" : "search-outline"} 
-            size={24} 
-            color="#333" 
-          />
-        </TouchableOpacity>
+        {/* ✅ NEW: Added sort button */}
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.searchIconContainer}
+            onPress={toggleSort}
+          >
+            <Ionicons name="funnel-outline" size={24} color="#6366f1" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.searchIconContainer}
+            onPress={toggleSearch}
+          >
+            <Ionicons 
+              name={searchVisible ? "close-outline" : "search-outline"} 
+              size={24} 
+              color="#6366f1" 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
       
+      {/* ✅ NEW: Sort Options */}
+      {sortVisible && (
+        <View style={styles.sortWrapper}>
+          <SortOptions 
+            selectedSort={selectedSort}
+            onSortChange={handleSortChange}
+          />
+        </View>
+      )}
+
       {searchVisible && (
-        <View style={styles. filterContainer}>
+        <View style={styles.filterContainer}>
           <View style={styles.searchRow}>
             <View style={styles.searchInputContainer}>
               <TextInput
@@ -1007,9 +1088,10 @@ const AdminScheduleMeetings = () => {
               filteredMeetings.map(renderMeetingCard)
             ) : (
               <View style={styles.emptyContainer}>
+                <Ionicons name="calendar-outline" size={64} color="#d1d5db" />
                 <Text style={styles.emptyText}>
-                  {searchText || dateFilter
-                    ? "No meetings match your search criteria" 
+                  {searchText || dateFilter || selectedSort !== 'all'
+                    ? "No meetings match your filters" 
                     : "No scheduled meetings found. "}
                 </Text>
               </View>
@@ -1032,7 +1114,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
+    borderBottomWidth:  1,
     borderBottomColor: "#e9ecef",
     elevation: 2,
   },
@@ -1043,29 +1125,69 @@ const styles = StyleSheet.create({
   HeaderText: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#2d3436",
+    color: "#6366f1",
     marginBottom: 4
   },
   currentTimeText:  {
     fontSize: 12,
-    color: "#6c757d",
+    color: "#6366f1",
     fontWeight: '500',
   },
+  // ✅ NEW: Header buttons container
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   searchIconContainer: {
-    padding: 8,
+    padding:  8,
     borderRadius: 20,
     backgroundColor: "#f1f3f5",
+    marginLeft: 8,
   },
-  filterContainer: {
+  // ✅ NEW: Sort wrapper and styles
+  sortWrapper: {
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e9ecef",
     paddingVertical: 10,
     paddingHorizontal: 16,
   },
+  sortContainer: {
+    paddingVertical: 4,
+  },
+  sortScrollContent: {
+    paddingVertical: 4,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical:  8,
+    borderRadius: 20,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 8,
+  },
+  sortChipText:  {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginLeft: 6,
+  },
+  sortChipTextActive: {
+    color: '#fff',
+  },
+  filterContainer: {
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
+    paddingVertical:  10,
+    paddingHorizontal: 16,
+  },
   searchRow: {
     flexDirection: 'row',
-    alignItems:  'center',
+    alignItems: 'center',
     gap: 8,
   },
   searchInputContainer: {
@@ -1104,7 +1226,7 @@ const styles = StyleSheet.create({
   },
   selectedDateText: {
     fontSize: 14,
-    color:  '#0277bd',
+    color: '#0277bd',
     fontWeight: '500',
   },
   clearDateButton: {
@@ -1139,7 +1261,7 @@ const styles = StyleSheet.create({
   upcomingCard: {
     borderColor: "#3b82f6",
     borderWidth: 2,
-    elevation: 4,
+    elevation:  4,
     shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1293,7 +1415,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3b82f6',
   },
   resolveButton: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor:  '#8b5cf6',
   },
   complaintActionButtonText:  {
     color: '#fff',
@@ -1316,11 +1438,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 16,
     color: "#6c757d",
+    marginTop: 16,
     marginBottom: 8,
     fontWeight: '500'
   },
 
-  // Calendar Styles (keep all existing calendar styles)
+  // Calendar Styles (keep all existing)
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1350,7 +1473,7 @@ const styles = StyleSheet.create({
   },
   calendarHeaderText: {
     color: '#fff',
-    fontSize:  12,
+    fontSize: 12,
     fontWeight: '600',
     letterSpacing: 1,
   },
@@ -1400,7 +1523,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   calendarGrid: {
-    flexDirection:  'row',
+    flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -1418,7 +1541,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   selectedDayButton: {
-    backgroundColor:  '#7c3aed',
+    backgroundColor: '#7c3aed',
     borderRadius: 50,
     borderColor: '#7c3aed',
     borderWidth: 1,
@@ -1434,7 +1557,7 @@ const styles = StyleSheet.create({
     color:  '#333',
     fontWeight: '600',
   },
-  selectedDayText:  {
+  selectedDayText: {
     color: '#fff',
     fontWeight: '600',
   },
@@ -1444,11 +1567,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#f8f9fa',
-    gap: 16,
   },
   cancelButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
+    marginRight: 16,
   },
   confirmButton: {
     paddingVertical: 8,

@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import FacultyDashboard from "./FacultyDashboard";
 import FacultyHistory from "./FacultyHistory";
 import FacultyScheduledMeetings from "./FacultySheduledMeetings";
-// import FacultyProfile from './FacultyProfile'
+import FacultyProfile from './FacultyProfile'
 import { View } from "react-native";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 // import ComplaintRegistrationApp from '../../pages/FacultyPages/ComplaintRegistrationApp.jsx';
@@ -31,9 +31,9 @@ export default function FacultyLayout() {
               case 'ScheduledMeetings':
                 iconName = 'calendar-clock';
                 break;
-              // case 'Profile':
-              //   iconName = 'account';
-              //   break;
+              case 'Profile':
+                iconName = 'account';
+                break;
               default:
                 iconName = 'help';
             }
@@ -54,7 +54,7 @@ export default function FacultyLayout() {
         <Tab.Screen name="Dashboard"         component={FacultyDashboard} />
         <Tab.Screen name="History"           component={FacultyHistory} />
         <Tab.Screen name="ScheduledMeetings" component={FacultyScheduledMeetings} />
-        {/* <Tab.Screen name="Profile"           component={FacultyProfile} /> */}
+        <Tab.Screen name="Profile"           component={FacultyProfile} />
         {/* <Tab.Screen name="complaint"           component={ComplaintRegistrationApp} /> */}
       </Tab.Navigator>
     </View>
